@@ -71,9 +71,11 @@ npx skills add mxcoppell/pixinsight-connector-skills
 Claude Code, as a plugin:
 
 ```sh
-claude plugin marketplace add jjmartres/astroagent
+claude plugin marketplace add https://github.com/jjmartres/astroagent.git#latest
 claude plugin install astroagent@astroagent
 ```
+
+`#latest` follows the newest [release](https://github.com/jjmartres/astroagent/releases/latest); leave it out to follow `main`. `claude plugin marketplace update astroagent` fetches a newer release.
 
 The plugin does not register the `pixinsight` MCP server: use the one from step 1 (or from the
 pixinsight-connector-skills plugin), never two, since two connectors compete for PixInsight's script slot.
@@ -81,13 +83,17 @@ pixinsight-connector-skills plugin), never two, since two connectors compete for
 OpenCode, or Claude Code without the plugin system:
 
 ```sh
-git clone https://github.com/jjmartres/astroagent ~/Repositories/astroagent
+git clone --branch latest https://github.com/jjmartres/astroagent ~/Repositories/astroagent
 ~/Repositories/astroagent/install.sh
 ```
 
-`install.sh` links the three skills into `~/.claude/skills/`, which Claude Code and OpenCode both read. `git pull` updates them.
+`install.sh` links the three skills into `~/.claude/skills/`, which Claude Code and OpenCode both read. To update to the newest release:
 
-Any Agent Skills harness: `npx skills add jjmartres/astroagent`.
+```sh
+git -C ~/Repositories/astroagent fetch --tags --force && git -C ~/Repositories/astroagent checkout -q latest
+```
+
+Any Agent Skills harness: `npx skills add jjmartres/astroagent` (follows `main`).
 
 ### 3. Nebulis credentials
 
@@ -285,7 +291,7 @@ The tests run `nebulis.py` against a local mock of the Nebulis API, and `astro_p
 
 ## Status
 
-Version 0.2.0, not yet run end to end on real data. See `CHANGELOG.md`. Every processing value in the skills is a starting point; tune it on your data and commit the values that work.
+Version 0.2.0 ([releases](https://github.com/jjmartres/astroagent/releases)), not yet run end to end on real data. See `CHANGELOG.md`. A release is cut by pushing a `vX.Y.Z` tag that matches `.claude-plugin/plugin.json`: `.github/workflows/release.yml` publishes it from the CHANGELOG and moves the `latest` tag. Every processing value in the skills is a starting point; tune it on your data and commit the values that work.
 
 ## Credits
 

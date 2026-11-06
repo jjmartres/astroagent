@@ -126,9 +126,9 @@ def code_block(t, text):
 INSTALL1 = """npm install -g pixinsight-connector@2.5.2
 claude mcp add -s user pixinsight -- pixinsight-connector
 pixinsight-connector doctor"""
-INSTALL2 = """claude plugin marketplace add jjmartres/astroagent
+INSTALL2 = """claude plugin marketplace add https://github.com/jjmartres/astroagent.git#latest
 claude plugin install astroagent@astroagent"""
-INSTALL2B = """git clone https://github.com/jjmartres/astroagent ~/Repositories/astroagent
+INSTALL2B = """git clone --branch latest https://github.com/jjmartres/astroagent ~/Repositories/astroagent
 ~/Repositories/astroagent/install.sh"""
 INSTALL3_ENV = """export ASTROAGENT_NEBULIS_URL=http://your-server:3001
 export ASTROAGENT_NEBULIS_API_KEY=neb-..."""
@@ -288,7 +288,7 @@ def page(lang):
         <ol class="sub-steps">{pi_steps}</ol></div></li>
     </ol>
     <div class="reqs">
-      <h3 class="minor">{esc(t["rq_title"])} <span class="badge">{esc(t["ver"])} {esc(t["st"])}</span></h3>
+      <h3 class="minor">{esc(t["rq_title"])} <a class="badge" href="{REPO}/releases/latest">{esc(t["ver"])} {esc(t["st"])}</a></h3>
       <ul>{reqs}</ul>
     </div>
   </div>
