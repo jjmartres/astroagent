@@ -8,5 +8,6 @@ First version, not yet run end to end on real data.
 - `nebulis` skill: `nebulis.py` client for objects, sessions, Frame Analysis and review, stacking plan, WBPP export download, project archive upload; tests against a mock API.
 - Claude Code plugin manifest, `install.sh` for Claude Code and OpenCode, CI.
 - Workflow skill renamed `astro-processing`; the setup is described generically.
+- Usage section on the site and in the README: an example Claude Code session and tips.
 - Nebulis settings read from `ASTROAGENT_NEBULIS_URL` and `ASTROAGENT_NEBULIS_API_KEY`, or from `~/.config/astroagent/env`.
 - Logo (“Stretch to light”), brand kit in `brand/`, website in English, French, Spanish and Italian on GitHub Pages.

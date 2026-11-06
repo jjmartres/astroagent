@@ -141,7 +141,100 @@ output/PROCESSING.md           the processing log
 
 ## Use
 
-In Claude Code or OpenCode: *"Process Sh2-105 with the astro-processing workflow"*, *"Review last night's subs of NGC 6888 in Nebulis"*, *"Fetch Sh2-112 for stacking"*. The agent stops at every stage with numbers and a preview. To let a stage run without stopping, say so (for example *"run stacking without asking"*); it is recorded in the session file.
+Open Claude Code or OpenCode in a terminal and ask in plain words. The agent loads the skill, then walks you through the stages, calling Nebulis and PixInsight as it goes. An example Claude Code session, shortened, with illustrative numbers:
+
+```text
+> Process Sh2-105 with astro-processing.
+
+⏺ Skill(astro-processing)
+  ⎿  Successfully loaded skill
+✻ Thinking…
+  The user wants a full processing run. Stage 0: check Nebulis, then list the nights and pick
+  the path from the filters.
+⏺ Bash(python3 ~/.claude/skills/nebulis/scripts/nebulis.py sessions Sh2-105)
+  ⎿  2026-09-05  filters D1   exposures 180   subs 120
+     2026-09-06  filters D1   exposures 180   subs 120
+     … +7 lines (ctrl+o to expand)
+⏺ Nebulis 2.2.0 connected. Sh2-105 has 9 nights: 7 with D1, 2 with D2, 180 s, gain 200. That is
+  the narrowband path. Process all 9 nights?
+
+> yes
+
+⏺ Bash(python3 ~/.claude/skills/nebulis/scripts/nebulis.py analysis Sh2-105 2026-09-08
+  --bad-only)
+  ⎿  Sh2-105 2026-09-08 · measured 120/120 · kept 120/120
+     grades: fair 4, good 116 · flags: soft 4
+     typical frame: stars 812 · FWHM 2.6 px · elongation 1.08
+     … +4 lines (ctrl+o to expand)
+⏺ Sub review: 962 of 1,000 subs kept; the night of 09-12 lost 31 subs to clouds. On 09-08, 4
+  subs are graded fair: soft stars, FWHM 3.4 px against 2.6. Keep or reject them?
+
+> reject the 4 soft ones
+
+⏺ Bash(python3 ~/.claude/skills/nebulis/scripts/nebulis.py review --reject
+  Sh2-105/2026-09-08/Light_Sh2-105_180.0s_D1_0041.fit …)
+  ⎿  4 frame(s) set to reject
+⏺ Bash(python3 ~/.claude/skills/nebulis/scripts/nebulis.py plan Sh2-105 --all)
+  ⎿  Sh2-105 · nights 2026-09-05 … 2026-09-27
+     lights 958 kept, 42 not kept · errors 0 · warnings 1
+       ! warning: flat_other_night {"bundle": "Flat_D2_0.42s", "days": 3}
+     … +38 lines (ctrl+o to expand)
+✻ Thinking…
+  One warning: D2 flats 3 days from the D2 nights. Allowed by rule R1 only if the rotator angle
+  did not change. Ask, do not assume.
+⏺ Done in Nebulis. Calibration plan: 0 errors, 1 warning. The D2 flats are 3 days from the D2
+  nights, same filter. Was the rotator angle unchanged during the campaign?
+
+> unchanged, accept
+
+⏺ Bash(python3 ~/.claude/skills/nebulis/scripts/nebulis.py fetch Sh2-105 --all --dest
+  ~/Astro/Processing/Sh2-105/data --allow-warnings)
+  ⎿  unpacked to ~/Astro/Processing/Sh2-105/data/Sh2-105_9-nights_wbpp
+     lights 958 (plan 958) · layout wbpp
+⏺ pixinsight - run_wbpp (MCP)(input_dirs: ["…/data/Sh2-105_9-nights_wbpp"], output_dir: "wbpp",
+  keywords: [{name: "NIGHT", mode: "pre"}], rejection: "Auto", local_normalization: true)
+  ⎿  WBPP started headless · run id 20261106-153204
+⏺ pixinsight - wbpp_status (MCP)(run_id: "20261106-153204")
+  ⎿  finished · exit code 0 · 41m 12s
+     master/masterLight_FILTER-D1_EXPTIME-180.xisf
+     master/masterLight_FILTER-D2_EXPTIME-180.xisf
+⏺ WBPP finished: D1 master 38.4 h, D2 master 9.5 h, both 3-channel. Next, crop, BXT correction
+  and plate solve: astrometry 0.08 px, pass. Then the gradient: proposal and preview below.
+
+  · · · gradient · channels · deconvolution · noise reduction · one approval each · · ·
+
+⏺ pixinsight - get_image_stats (MCP)(view_id: "HOO_s3")
+  ⎿  median 0.251 · clampFractions at 1: R 0.0014, G 0.0009, B 0.0011
+⏺ Three stretch candidates side by side. s3 clips 0.14 % of pixels to white, above the 0.1 %
+  gate: rejected. s1 or s2?
+
+> s2, and show me HOO against the Foraxx palette
+
+⏺ pixinsight - export_image (MCP)(view_id: "Sh2_105_Foraxx", file_path:
+  "final/Sh2-105_Foraxx_2026-11-06.xisf")
+  ⎿  Wrote output/final/Sh2-105_Foraxx_2026-11-06.xisf (32-bit)
+⏺ Foraxx kept. Exported final/Sh2-105_Foraxx_2026-11-06 as .xisf, .tif and .jpg, and wrote
+  PROCESSING.md. Store them with Sh2-105 in Nebulis?
+
+> yes
+
+⏺ Bash(python3 ~/.claude/skills/nebulis/scripts/nebulis.py push Sh2-105 --bundle output/push
+  --name Sh2-105_2026-11-06_processing.zip)
+  ⎿  stored Sh2-105_2026-11-06_processing.zip (41.3 MB) with Sh2-105
+⏺ Stored in Nebulis under Project archives. The final image is open in PixInsight; every other
+  view of this session is closed.
+
+╭────────────────────────────────────────────────────────────╮
+│ >                                                          │
+╰────────────────────────────────────────────────────────────╯
+```
+
+Good to know:
+
+- **Pick up later.** Say *"continue Sh2-105"*: the agent reads its session file and resumes at the first stage not done.
+- **Let a stage run alone.** Say *"run stacking without asking"*: that stage no longer waits, for this session only.
+- **Nebulis on its own.** *"Which subs were bad last night on NGC 6888?"* or *"fetch Sh2-112 for stacking"* use only the `nebulis` skill.
+- **Change a value.** Answer a proposal with another value (*"denoise 0.4"*); the agent keeps it for the rest of the session and logs it.
 
 ## Brand and website
 

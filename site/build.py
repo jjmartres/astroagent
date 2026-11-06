@@ -11,6 +11,7 @@ import shutil
 from pathlib import Path
 
 from i18n import LANGS
+from usage import USAGE, SESSION, resolve
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "_site"
@@ -70,6 +71,38 @@ def codify(s):
     return re.sub(r"(ASTROAGENT_[A-Z_]+|~/[\w./-]+)", r"<code>\1</code>", s)
 
 
+def split_tool(call):
+    """'Bash(args)' -> ('Bash', '(args)'); 'pixinsight - x (MCP)(args)' -> ('pixinsight - x (MCP)', '(args)')."""
+    i = call.index("(MCP)") + 5 if "(MCP)(" in call else call.index("(")
+    return call[:i], call[i:]
+
+
+def render_session(u):
+    out = []
+    for kind, payload in SESSION:
+        if kind == "user":
+            out.append(f'<div class="cc-user"><span class="p">&gt;</span> {esc(resolve(payload, u))}</div>')
+        elif kind == "think":
+            out.append(f'<div class="cc-think"><span class="star">✻</span> Thinking…</div>'
+                       f'<div class="cc-thought">{esc(resolve(payload, u))}</div>')
+        elif kind == "say":
+            out.append(f'<div class="cc-say"><span class="dot">⏺</span><p>{esc(resolve(payload, u))}</p></div>')
+        elif kind == "note":
+            out.append(f'<div class="cc-note">· · · {esc(resolve(payload, u))} · · ·</div>')
+        else:
+            if kind == "skill":
+                name, args, lines = "Skill", f"({payload[0]})", payload[1]
+            else:
+                name, args = split_tool(payload[0])
+                lines = payload[1]
+            res = "".join(
+                f'<div class="cc-out{" more" if l.startswith("…") else ""}">'
+                f'<span class="el">{"⎿" if k == 0 else ""}</span><span>{esc(l)}</span></div>'
+                for k, l in enumerate(lines))
+            out.append(f'<div class="cc-tool"><span class="dot ok">⏺</span><span><b>{esc(name)}</b>{esc(args)}</span></div>{res}')
+    return "\n".join(out)
+
+
 def code_block(t, text):
     return (f'<div class="code"><pre><code>{esc(text)}</code></pre>'
             f'<button type="button" class="copy" data-copied="{esc(t["copied"])}">{esc(t["copy"])}</button></div>')
@@ -93,6 +126,7 @@ chmod 600 ~/.config/astroagent/env"""
 
 def page(lang):
     t = LANGS[lang]
+    u = USAGE[lang]
     pre = "" if lang == "en" else "../"
     url = SITE if lang == "en" else f"{SITE}{lang}/"
     alts = "".join(
@@ -111,6 +145,8 @@ def page(lang):
             for n in steps)
         flow += f'<section class="phase"><header><h3>{esc(t[pk])}</h3><span>{esc(t[ps])}</span></header><ol>{items}</ol></section>'
     feats = "".join(f'<article class="feat"><h3>{esc(t[f"f{i}"])}</h3><p>{esc(t[f"f{i}d"])}</p></article>' for i in range(1, 7))
+    chat = render_session(u)
+    tips = "".join(f'<li><h4>{esc(h)}</h4><p>{esc(p)}</p></li>' for h, p in u["tips"])
     reqs = "".join(f"<li>{esc(r)}</li>" for r in t["rq"])
     return f"""<!DOCTYPE html>
 <html lang="{lang}" data-theme="dark">
@@ -145,6 +181,7 @@ def page(lang):
       <a href="#workflow">{esc(t["nav_workflow"])}</a>
       <a href="#features">{esc(t["nav_features"])}</a>
       <a href="#install">{esc(t["nav_install"])}</a>
+      <a href="#use">{esc(u["nav"])}</a>
     </nav>
     <div class="tools">
       <div class="langs" role="group" aria-label="{esc(t["lang_switch"])}">{switch}</div>
@@ -224,6 +261,23 @@ def page(lang):
     <div class="cols">
       <div><h3>{esc(t["rq_title"])}</h3><ul class="req">{reqs}</ul></div>
       <div><h3>{esc(t["st_title"])}</h3><p>{esc(t["st"])}</p></div>
+    </div>
+  </div>
+</section>
+<section id="use" class="block">
+  <div class="wrap">
+    <h2>{esc(u["title"])}</h2>
+    <p class="sub">{esc(u["lead"])}</p>
+    <div class="use-grid">
+      <figure class="cc" aria-label="{esc(u["caption"])}">
+        <div class="cc-bar"><i></i><i></i><i></i><span>~/Astro/Processing · claude</span></div>
+        <div class="cc-body">{chat}
+          <div class="cc-input"><span class="p">&gt;</span><span class="cursor"></span></div>
+          <div class="cc-hint"><span>? for shortcuts</span><span>astro-processing · nebulis</span></div>
+        </div>
+        <figcaption>{esc(u["caption"])}</figcaption>
+      </figure>
+      <aside class="tips"><h3>{esc(u["tips_title"])}</h3><ul>{tips}</ul></aside>
     </div>
   </div>
 </section>
