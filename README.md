@@ -291,7 +291,7 @@ The tests run `nebulis.py` against a local mock of the Nebulis API, and `astro_p
 
 ## Status
 
-Version 0.2.0 ([releases](https://github.com/jjmartres/astroagent/releases)), not yet run end to end on real data. See `CHANGELOG.md`. A release is cut by pushing a `vX.Y.Z` tag that matches `.claude-plugin/plugin.json`: `.github/workflows/release.yml` publishes it from the CHANGELOG and moves the `latest` tag. Every processing value in the skills is a starting point; tune it on your data and commit the values that work.
+Version 0.2.0 ([releases](https://github.com/jjmartres/astroagent/releases)), not yet run end to end on real data. See `CHANGELOG.md`. To cut a release, bump the version in `.claude-plugin/plugin.json` and add its section to `CHANGELOG.md`: on the push to `main`, `.github/workflows/release.yml` creates the `vX.Y.Z` tag and the GitHub release from the CHANGELOG, and moves the `latest` tag. It can also be run by hand from the Actions tab. Every processing value in the skills is a starting point; tune it on your data and commit the values that work.
 
 ## Credits
 

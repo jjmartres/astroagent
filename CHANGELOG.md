@@ -9,7 +9,7 @@
   - Pages in the astroagent colours (Night, OIII, H-alpha) with a light/dark switch, self-contained.
 - `nebulis.py`: `object`, `telescopes` (connection details stripped) and `site` commands.
 - `astro-processing`: bootstraps the project after Fetch, researches the object while WBPP runs, writes the documentation at Stage 12; rig facts come from `rig.json` when present.
-- Releases: pushing a `vX.Y.Z` tag publishes the GitHub release from this file and moves the `latest` tag; the install commands follow `latest`.
+- Releases: a version bump in `plugin.json` on `main` creates the `vX.Y.Z` tag and the GitHub release from this file, and moves the `latest` tag; the install commands follow `latest`.
 - Site redesigned: the example session replayed like a terminal recording at the top, gains, the approval loop, install with shell tabs; optional Nebulis Connector setup in PixInsight.
 
 ## 0.1.0 (2026-11-06)
