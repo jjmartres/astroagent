@@ -78,12 +78,9 @@ INSTALL2 = """claude plugin marketplace add jjmartres/astroagent
 claude plugin install astroagent@astroagent"""
 INSTALL2B = """git clone https://github.com/jjmartres/astroagent ~/Repositories/astroagent
 ~/Repositories/astroagent/install.sh"""
-INSTALL3 = """mkdir -p ~/.config/nebulis
-cat > ~/.config/nebulis/env <<'EOF'
-NEBULIS_URL=http://your-server:3001
-NEBULIS_API_KEY=neb-...
-EOF
-chmod 600 ~/.config/nebulis/env"""
+INSTALL3 = """mkdir -p ~/.config/astroagent
+printf '%s\\n' 'ASTROAGENT_NEBULIS_URL=http://your-server:3001' 'ASTROAGENT_NEBULIS_API_KEY=neb-...' > ~/.config/astroagent/env
+chmod 600 ~/.config/astroagent/env"""
 
 
 def page(lang):

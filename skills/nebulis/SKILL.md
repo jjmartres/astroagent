@@ -19,7 +19,7 @@ Nebulis is the user's self-hosted library of imaging sessions and calibration fr
 
 ## Configuration
 
-The script reads `NEBULIS_URL` and `NEBULIS_API_KEY` from the environment, or from `~/.config/nebulis/env` (`KEY=value` lines, `chmod 600`). Never print, echo or paste the key, never put it on a command line, never write it into a file other than that one. If the configuration is missing, tell the user how to set it (see the repository README) and stop.
+The script reads `ASTROAGENT_NEBULIS_URL` and `ASTROAGENT_NEBULIS_API_KEY` from the environment, or from `~/.config/astroagent/env` (`KEY=value` lines, `chmod 600`); environment variables win. Never print, echo or paste the key, never put it on a command line, never write it into a file other than that one. If the configuration is missing, tell the user how to set it (see the repository README) and stop.
 
 Some commands need an **admin** key: `review` and `push`. A 403 means the key is not admin.
 
@@ -60,4 +60,4 @@ WBPP reads IMAGETYP, FILTER and EXPTIME from the headers. With several nights, a
 
 - Read-only by default: only `review` and `push` change anything on the server, and only after the user approved the exact list or file.
 - Never delete anything in Nebulis; the script has no delete command on purpose.
-- `reference/api.md` documents the endpoints, for questions the script does not answer. Use `curl` only for read-only `GET` calls, with the key read from the environment (`-H "X-API-Key: $NEBULIS_API_KEY"`), never typed.
+- `reference/api.md` documents the endpoints, for questions the script does not answer. Use `curl` only for read-only `GET` calls, and only when the key is in the environment (`-H "X-API-Key: $ASTROAGENT_NEBULIS_API_KEY"`), never typed; otherwise use the script.

@@ -90,13 +90,29 @@ Any Agent Skills harness: `npx skills add jjmartres/astroagent`.
 
 ### 3. Nebulis credentials
 
-```sh
-mkdir -p ~/.config/nebulis
-cp ~/Repositories/astroagent/config/nebulis.env.example ~/.config/nebulis/env
-chmod 600 ~/.config/nebulis/env
-$EDITOR ~/.config/nebulis/env        # NEBULIS_URL and NEBULIS_API_KEY
-python3 ~/.claude/skills/nebulis/scripts/nebulis.py status   # with the plugin: the skill's folder under ~/.claude/plugins
+`nebulis.py` reads two settings, from the environment first, then from `~/.config/astroagent/env`:
+
+| Variable | Value |
+|---|---|
+| `ASTROAGENT_NEBULIS_URL` | Your Nebulis server, as you open it in a browser (for example `http://nas.local:3001`) |
+| `ASTROAGENT_NEBULIS_API_KEY` | A key from Nebulis, Settings → API keys (`neb-…`); an admin key to record reviews and upload results |
+
+Environment variables, for example in fish (`~/.config/fish/config.fish`):
+
+```fish
+set -gx ASTROAGENT_NEBULIS_URL http://nas.local:3001
+set -gx ASTROAGENT_NEBULIS_API_KEY neb-...
 ```
+
+Or the file, which keeps the key out of your shell configuration (works in fish, bash and zsh):
+
+```sh
+mkdir -p ~/.config/astroagent
+printf '%s\n' 'ASTROAGENT_NEBULIS_URL=http://nas.local:3001' 'ASTROAGENT_NEBULIS_API_KEY=neb-...' > ~/.config/astroagent/env
+chmod 600 ~/.config/astroagent/env
+```
+
+Check with `python3 ~/.claude/skills/nebulis/scripts/nebulis.py status` (with the plugin, the script is in the plugin's folder under `~/.claude/plugins/`).
 
 ### 4. WBPP, once
 

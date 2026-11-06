@@ -14,6 +14,6 @@ for skill in astro-processing nebulis; do
   echo "linked $target -> $here/skills/$skill"
 done
 chmod +x "$here/skills/nebulis/scripts/nebulis.py"
-if [ ! -f "$HOME/.config/nebulis/env" ]; then
-  echo "next: create ~/.config/nebulis/env from config/nebulis.env.example (chmod 600)"
+if [ ! -f "$HOME/.config/astroagent/env" ] && [ -z "${ASTROAGENT_NEBULIS_API_KEY:-}" ]; then
+  echo "next: set ASTROAGENT_NEBULIS_URL and ASTROAGENT_NEBULIS_API_KEY, or create ~/.config/astroagent/env from config/astroagent.env.example (chmod 600)"
 fi

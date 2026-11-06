@@ -28,7 +28,7 @@ class NebulisCliTest(unittest.TestCase):
         cls.srv.shutdown()
 
     def run_cli(self, *args, key=mock_nebulis.KEY):
-        env = {**os.environ, "NEBULIS_URL": self.url, "NEBULIS_API_KEY": key, "HOME": tempfile.mkdtemp()}
+        env = {**os.environ, "ASTROAGENT_NEBULIS_URL": self.url, "ASTROAGENT_NEBULIS_API_KEY": key, "HOME": tempfile.mkdtemp()}
         return subprocess.run([sys.executable, str(SCRIPT), *args], capture_output=True, text=True, env=env, timeout=60)
 
     def test_status(self):
@@ -116,11 +116,11 @@ class NebulisCliTest(unittest.TestCase):
             self.assertIn(".zip", r.stderr)
 
     def test_missing_config(self):
-        env = {k: v for k, v in os.environ.items() if not k.startswith("NEBULIS_")}
+        env = {k: v for k, v in os.environ.items() if not k.startswith("ASTROAGENT_")}
         env["HOME"] = tempfile.mkdtemp()
         r = subprocess.run([sys.executable, str(SCRIPT), "status"], capture_output=True, text=True, env=env)
         self.assertEqual(r.returncode, 1)
-        self.assertIn("NEBULIS_URL", r.stderr)
+        self.assertIn("ASTROAGENT_NEBULIS_URL", r.stderr)
 
 
 if __name__ == "__main__":

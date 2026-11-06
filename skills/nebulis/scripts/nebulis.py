@@ -4,9 +4,9 @@
 Standard library only (Python 3.9+). Every command prints a short human-readable summary;
 add --json to get the raw API payload instead.
 
-Configuration (environment variables, or the file ~/.config/nebulis/env as KEY=VALUE lines):
-  NEBULIS_URL       Server base URL, e.g. http://nas.local:3001   (no trailing /api)
-  NEBULIS_API_KEY   API key created in Nebulis, Settings -> API keys (starts with "neb-")
+Configuration: environment variables, which win, or the file ~/.config/astroagent/env (KEY=VALUE lines):
+  ASTROAGENT_NEBULIS_URL       Nebulis server base URL, e.g. http://nas.local:3001 (no trailing /api)
+  ASTROAGENT_NEBULIS_API_KEY   API key created in Nebulis, Settings -> API keys (starts with "neb-")
 
 The key is sent in the X-API-Key header only. It is never printed, never written to disk by this
 script, and never put on a command line.
@@ -45,7 +45,9 @@ import uuid
 import zipfile
 from pathlib import Path
 
-ENV_FILE = Path.home() / ".config" / "nebulis" / "env"
+ENV_FILE = Path.home() / ".config" / "astroagent" / "env"
+URL_VAR = "ASTROAGENT_NEBULIS_URL"
+KEY_VAR = "ASTROAGENT_NEBULIS_API_KEY"
 USER_AGENT = "nebulis-cli/1.0 (astroagent)"
 
 
@@ -69,12 +71,12 @@ def load_config() -> tuple[str, str]:
                 continue
             k, v = line.split("=", 1)
             values[k.strip().removeprefix("export ").strip()] = v.strip().strip('"').strip("'")
-    url = os.environ.get("NEBULIS_URL") or values.get("NEBULIS_URL") or ""
-    key = os.environ.get("NEBULIS_API_KEY") or values.get("NEBULIS_API_KEY") or ""
+    url = os.environ.get(URL_VAR) or values.get(URL_VAR) or ""
+    key = os.environ.get(KEY_VAR) or values.get(KEY_VAR) or ""
     if not url:
-        die(f"NEBULIS_URL is not set (environment or {ENV_FILE})", 1)
+        die(f"{URL_VAR} is not set (environment or {ENV_FILE})", 1)
     if not key:
-        die(f"NEBULIS_API_KEY is not set (environment or {ENV_FILE})", 1)
+        die(f"{KEY_VAR} is not set (environment or {ENV_FILE})", 1)
     url = url.rstrip("/")
     if url.endswith("/api/v1"):
         url = url[: -len("/api/v1")]
@@ -459,7 +461,7 @@ def main(argv: list[str] | None = None) -> None:
     except ApiError as e:
         hint = ""
         if e.status == 401:
-            hint = " (check NEBULIS_API_KEY; keys are created in Settings -> API keys)"
+            hint = f" (check {KEY_VAR}; keys are created in Nebulis, Settings -> API keys)"
         elif e.status == 403:
             hint = " (this action needs an admin key)"
         elif e.status == 404 and e.code in ("NOT_FOUND", "HTTP_ERROR"):
