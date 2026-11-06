@@ -4,7 +4,7 @@ set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 dest="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
 mkdir -p "$dest"
-for skill in elendil-processing nebulis; do
+for skill in astro-processing nebulis; do
   target="$dest/$skill"
   if [ -e "$target" ] && [ ! -L "$target" ]; then
     echo "skip $skill: $target exists and is not a link (move it away first)" >&2

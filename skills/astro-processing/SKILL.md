@@ -1,29 +1,29 @@
 ---
-name: elendil-processing
+name: astro-processing
 description: >-
-  Process an Elendil astrophotography campaign end to end, from the Nebulis library to a finished
+  Process an astrophotography campaign shot with the reference setup end to end, from the Nebulis library to a finished
   image in PixInsight, through the `pixinsight` MCP server (pixinsight-connector): sub review,
   calibration plan, WBPP stacking, dual-band (D1/D2) channel extraction with HOO/SHO palettes or the
   broadband path, starless stretch, finishing, export, processing log, and push back to Nebulis.
   Every stage measures, proposes, shows a preview and waits for approval. Use for "process
   Sh2-105", "stack and process my last campaign", "HOO from my D1 data", "post-process this
-  Nebulis object", or any request to process Elendil data in PixInsight.
+  Nebulis object", or any request to process my astro data in PixInsight.
 license: MIT
 metadata:
   author: jjmartres
   version: "0.1.0"
 ---
 
-# Elendil processing
+# Astro processing
 
-You drive PixInsight through the `pixinsight` MCP server for one rig, **Elendil** (Askar 91F, ZWO ASI585MC Air, D1/D2 dual-band filters). The data comes from **Nebulis** through the `nebulis` skill. Your job is to propose each processing stage with numbers and a preview, apply it only after the user approves, and log everything.
+You drive PixInsight through the `pixinsight` MCP server for one setup, the reference scope (Askar 91F, ZWO ASI585MC Air, D1/D2 dual-band filters). The data comes from **Nebulis** through the `nebulis` skill. Your job is to propose each processing stage with numbers and a preview, apply it only after the user approves, and log everything.
 
 Before the first stage, read these files next to this one, once per session:
 
 | File | What it holds |
 |---|---|
 | `reference/rig.md` | Optics, camera, filters, gains, image scale, standard capture settings |
-| `reference/calibration-rules.md` | Elendil calibration rules and how to read the Nebulis plan against them |
+| `reference/calibration-rules.md` | Calibration rules of the setup and how to read the Nebulis plan against them |
 | `reference/quality-gates.md` | Every gate, its measurement and its threshold |
 | `reference/narrowband-dualband.md` | D1/D2 channel extraction, OIII combination, palette expressions |
 | `reference/broadband.md` | Path for unfiltered data (galaxies, reflection nebulae) |
@@ -43,11 +43,11 @@ Before the first stage, read these files next to this one, once per session:
 
 ## Session file
 
-Keep `<workspace>/agentic/work/elendil-session.md` up to date: object, nights, filter sets, path (narrowband or broadband), stage status (`todo` / `done` / `skipped`), approved parameters, stages allowed to run without waiting, open views and their roles. On resume, read it first and continue from the first stage not `done`.
+Keep `<workspace>/agentic/work/astro-session.md` up to date: object, nights, filter sets, path (narrowband or broadband), stage status (`todo` / `done` / `skipped`), approved parameters, stages allowed to run without waiting, open views and their roles. On resume, read it first and continue from the first stage not `done`.
 
 ## Stage 0 — Setup
 
-1. Workspace: `$ELENDIL_ROOT/<OBJECT>` (default `ELENDIL_ROOT=~/Astro/Processing`). Create it if needed, then `set_workspace` to it. Raw data will live in `<workspace>/data/`.
+1. Workspace: `$ASTROAGENT_ROOT/<OBJECT>` (default `ASTROAGENT_ROOT=~/Astro/Processing`). Create it if needed, then `set_workspace` to it. Raw data will live in `<workspace>/data/`.
 2. `list_open_images`: record ids already open; never touch them.
 3. Preflight: if the `pixinsight-preflight` skill is installed, run it (it writes `agentic/preflight.json`); otherwise `pixinsight_info` and `inspect_environment`. Note the PixInsight build, BXT/NXT/SXT versions, Gaia DR3/SP, MARS. `list_processes` and check for `GeneralizedHyperbolicStretch`.
 4. `nebulis.py status` (from the `nebulis` skill). A failure here stops the session with the script's message.
@@ -75,7 +75,7 @@ Per night: `nebulis.py analysis <OBJECT> <DATE> --bad-only`. Report per night: m
 ## Stage 6 — Masters: open, crop, correct, solve
 
 1. `open_image` each master from `<workspace>/output/wbpp/master/`; `rename_view` to `D1`, `D2` or `RGB` (broadband). `get_image_dimensions`: all masters of one target must match; if not, `align_to_reference` onto `D1` (or the deepest master).
-2. Common crop: `run_pjsr` with `include: ["<this skill's folder>/scripts/pjsr/elendil-helpers.js"]` and code `JSON.stringify(commonBorders(["D1","D2"]))`. `crop_image` every master with the returned `crop` amounts.
+2. Common crop: `run_pjsr` with `include: ["<this skill's folder>/scripts/pjsr/astro-helpers.js"]` and code `JSON.stringify(commonBorders(["D1","D2"]))`. `crop_image` every master with the returned `crop` amounts.
 3. `run_bxt` with `correct_only: true` on each master.
 4. `run_plate_solve` each master with the scale from `reference/rig.md` (pick the profile from `FOCALLEN`) and the target's catalogue position (state it, the user confirms). `verify_astrometry`. **Gate G3**.
 5. `export_image` each master to `agentic/work/<Target>_s06_<view>.xisf`.

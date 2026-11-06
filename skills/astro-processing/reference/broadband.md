@@ -25,7 +25,7 @@ Then stars and stretch from `stretch-and-finish.md`.
 
 ## 3. Luminance
 
-Elendil has no separate luminance filter. If the user brings a luminance master (from another dataset), fuse it on the **stretched** image with ChannelCombination in HSV mode, the luminance as V: `run_process` `name: "ChannelCombination"`, call `describe_process` first for the exact parameter names. LRGBCombination and CIE Lab fusion have destroyed chrominance on this user's data before. Check: median saturation (`measure_saturation`) not lower after the fusion.
+The reference setup has no separate luminance filter. If the user brings a luminance master (from another dataset), fuse it on the **stretched** image with ChannelCombination in HSV mode, the luminance as V: `run_process` `name: "ChannelCombination"`, call `describe_process` first for the exact parameter names. LRGBCombination and CIE Lab fusion have destroyed chrominance on this user's data before. Check: median saturation (`measure_saturation`) not lower after the fusion.
 
 ## 4. Optional H-alpha
 

@@ -1,8 +1,8 @@
 # Calibration rules
 
-Nebulis builds the calibration plan (`nebulis.py plan`): for each night × filter × exposure group of lights it picks a dark, a flat, a flat-dark and a bias, flats **attached** to the object first, the rest **matched** from the Calibration Library. Your job in Stage 3 is to check that plan against the Elendil rules below and to explain every issue.
+Nebulis builds the calibration plan (`nebulis.py plan`): for each night × filter × exposure group of lights it picks a dark, a flat, a flat-dark and a bias, flats **attached** to the object first, the rest **matched** from the Calibration Library. Your job in Stage 3 is to check that plan against the rules below and to explain every issue.
 
-## Elendil rules
+## Rules of the setup
 
 | # | Rule | Why |
 |---|---|---|
@@ -20,7 +20,7 @@ Nebulis builds the calibration plan (`nebulis.py plan`): for each night × filte
 For each group (night · filter · exposure · gain · binning · temperature · lights):
 
 - `dark`: same gain, exposure and binning as the group; `deltaTempC` within ±2. Otherwise R4 is broken.
-- `flat`: `filter` equal to the group's filter (R2). `source: attached` is what the Elendil workflow expects: flats are attached to the object in Nebulis. `matched` is acceptable only if the filter matches and the user confirms the CAA angle did not change (R1, R3).
+- `flat`: `filter` equal to the group's filter (R2). `source: attached` is what this workflow expects: flats are attached to the object in Nebulis. `matched` is acceptable only if the filter matches and the user confirms the CAA angle did not change (R1, R3).
 - `flatDark` or `bias`: at least one (R6). When both exist, the flat-dark is used for the flats.
 - `issues`: explain each one with the table below.
 

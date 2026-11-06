@@ -1,4 +1,4 @@
-// elendil-helpers.js: PJSR helpers for the elendil-processing skill.
+// astro-helpers.js: PJSR helpers for the astro-processing skill.
 //
 // Load with run_pjsr: include: ["<absolute path to this file>"], then call the functions in `code`.
 // The code is eval-ed as a script: no top-level return; the last expression is the result.

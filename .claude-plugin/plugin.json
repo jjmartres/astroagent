@@ -1,6 +1,6 @@
 {
   "name": "astroagent",
-  "description": "Agent skills to process Elendil astrophotography campaigns from a Nebulis library to a finished image in PixInsight, through the pixinsight-connector MCP server: sub review, calibration plan, WBPP stacking, dual-band HOO/SHO or broadband processing, export and processing log.",
+  "description": "Agent skills to process astrophotography campaigns from a Nebulis library to a finished image in PixInsight, through the pixinsight-connector MCP server: sub review, calibration plan, WBPP stacking, dual-band HOO/SHO or broadband processing, export and processing log.",
   "version": "0.1.0",
   "author": {
     "name": "jjmartres",

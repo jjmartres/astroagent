@@ -9,13 +9,13 @@
 
 # astroagent
 
-Agent skills to process astrophotography campaigns of the **Elendil** rig (Askar 91F, ZWO ASI585MC Air, Askar D1/D2 dual-band filters) from the **Nebulis** library to a finished image in **PixInsight**, with an AI agent (Claude Code or OpenCode) that proposes every stage and waits for your approval.
+Agent skills to process astrophotography campaigns shot with my setup (Askar 91F, ZWO ASI585MC Air, Askar D1/D2 dual-band filters) from the **Nebulis** library to a finished image in **PixInsight**, with an AI agent (Claude Code or OpenCode) that proposes every stage and waits for your approval.
 
 Nothing here modifies PixInsight or the connector: PixInsight is operated through [pixinsight-connector](https://github.com/mxcoppell/pixinsight-connector), used as published on npm. This repository holds only knowledge (skills), a Nebulis client script and a PJSR helper.
 
 | Skill | What it does |
 |---|---|
-| `skills/elendil-processing` | The workflow: sub review, calibration plan, WBPP stacking, D1/D2 channel extraction and HOO/SHO palettes (or the broadband path), starless stretch with three candidates, finishing, export, `PROCESSING.md`, push back to Nebulis. Rig facts, calibration rules and quality gates are in its `reference/` folder. |
+| `skills/astro-processing` | The workflow: sub review, calibration plan, WBPP stacking, D1/D2 channel extraction and HOO/SHO palettes (or the broadband path), starless stretch with three candidates, finishing, export, `PROCESSING.md`, push back to Nebulis. Rig facts, calibration rules and quality gates are in its `reference/` folder. |
 | `skills/nebulis` | A command-line client (`scripts/nebulis.py`) for the Nebulis API: objects, nights, Frame Analysis and keep/reject review, stacking plan, WBPP-ready export download, upload of results. Usable on its own. |
 
 ## How a session runs
@@ -104,7 +104,7 @@ Open WeightedBatchPreprocessing in PixInsight and check that colour (CFA) images
 
 ### 5. Where files go
 
-Each object is processed in `$ELENDIL_ROOT/<OBJECT>/` (default `~/Astro/Processing/<OBJECT>/`):
+Each object is processed in `$ASTROAGENT_ROOT/<OBJECT>/` (default `~/Astro/Processing/<OBJECT>/`):
 
 ```
 data/<OBJECT>_<nights>_wbpp/   the Nebulis export (read-only for the agent)
@@ -116,7 +116,7 @@ output/PROCESSING.md           the processing log
 
 ## Use
 
-In Claude Code or OpenCode: *"Process Sh2-105 with the Elendil workflow"*, *"Review last night's subs of NGC 6888 in Nebulis"*, *"Fetch Sh2-112 for stacking"*. The agent stops at every stage with numbers and a preview. To let a stage run without stopping, say so (for example *"run stacking without asking"*); it is recorded in the session file.
+In Claude Code or OpenCode: *"Process Sh2-105 with the astro-processing workflow"*, *"Review last night's subs of NGC 6888 in Nebulis"*, *"Fetch Sh2-112 for stacking"*. The agent stops at every stage with numbers and a preview. To let a stage run without stopping, say so (for example *"run stacking without asking"*); it is recorded in the session file.
 
 ## Brand and website
 
@@ -128,7 +128,7 @@ The logo, its variants and icons are in `brand/` (usage in `brand/BRAND.md`). Th
 python3 -m unittest discover -s tests
 ```
 
-The tests run `nebulis.py` against a local mock of the Nebulis API. The PixInsight side cannot run in CI; `skills/elendil-processing/scripts/pjsr/elendil-helpers.js` is checked by hand on real data.
+The tests run `nebulis.py` against a local mock of the Nebulis API. The PixInsight side cannot run in CI; `skills/astro-processing/scripts/pjsr/astro-helpers.js` is checked by hand on real data.
 
 ## Status
 

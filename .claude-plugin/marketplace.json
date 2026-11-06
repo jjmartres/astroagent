@@ -9,7 +9,7 @@
     {
       "name": "astroagent",
       "source": "./",
-      "description": "Elendil processing workflow and Nebulis client skills. Uses the pixinsight MCP server registered by pixinsight-connector-skills or by hand."
+      "description": "Astro processing workflow and Nebulis client skills. Uses the pixinsight MCP server registered by pixinsight-connector-skills or by hand."
     }
   ]
 }

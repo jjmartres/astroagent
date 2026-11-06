@@ -25,7 +25,7 @@ jobs:
       - name: nebulis.py tests
         run: python -m unittest discover -s tests -v
       - name: PJSR helpers parse
-        run: node -e "new Function(require('fs').readFileSync('skills/elendil-processing/scripts/pjsr/elendil-helpers.js','utf8'))"
+        run: node -e "new Function(require('fs').readFileSync('skills/astro-processing/scripts/pjsr/astro-helpers.js','utf8'))"
       - name: Site builds
         run: python site/build.py
       - name: Manifests and skill front matter

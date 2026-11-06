@@ -1,4 +1,4 @@
-# Elendil rig
+# Reference setup
 
 Facts the processing relies on. If a FITS header disagrees with this page, trust the header and tell the user.
 

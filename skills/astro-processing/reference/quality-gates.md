@@ -1,6 +1,6 @@
 # Quality gates
 
-Each gate is measured in PixInsight (or read from Nebulis) and reported with its number. A failed gate stops the stage: retry with new parameters, or ask. Thresholds are starting values for Elendil data; when the user changes one, record it in the session file.
+Each gate is measured in PixInsight (or read from Nebulis) and reported with its number. A failed gate stops the stage: retry with new parameters, or ask. Thresholds are starting values for data from the reference setup; when the user changes one, record it in the session file.
 
 | Gate | Stage | Measure | Pass | Notes |
 |---|---|---|---|---|

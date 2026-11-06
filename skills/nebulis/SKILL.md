@@ -6,7 +6,7 @@ description: >-
   stacking plan (lights kept plus matched darks, flats, flat-darks, bias), download a WBPP-ready
   export, and store processing results with the object. Use for "what's in Nebulis for Sh2-105",
   "which subs were bad last night", "fetch NGC 6888 for stacking", "push the final image to
-  Nebulis", and as the data source of the elendil-processing skill.
+  Nebulis", and as the data source of the astro-processing skill.
 license: MIT
 metadata:
   author: jjmartres
