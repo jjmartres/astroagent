@@ -46,7 +46,7 @@ import zipfile
 from pathlib import Path
 
 ENV_FILE = Path.home() / ".config" / "nebulis" / "env"
-USER_AGENT = "nebulis-cli/1.0 (elendil-pixinsight)"
+USER_AGENT = "nebulis-cli/1.0 (astroagent)"
 
 
 class ApiError(Exception):

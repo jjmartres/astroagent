@@ -1,0 +1,15 @@
+{
+  "name": "astroagent",
+  "owner": {
+    "name": "jjmartres",
+    "url": "https://github.com/jjmartres"
+  },
+  "description": "Astrophotography processing skills for PixInsight and Nebulis.",
+  "plugins": [
+    {
+      "name": "astroagent",
+      "source": "./",
+      "description": "Elendil processing workflow and Nebulis client skills. Uses the pixinsight MCP server registered by pixinsight-connector-skills or by hand."
+    }
+  ]
+}

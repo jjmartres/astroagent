@@ -1,0 +1,39 @@
+name: check
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.9", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: nebulis.py tests
+        run: python -m unittest discover -s tests -v
+      - name: PJSR helpers parse
+        run: node -e "new Function(require('fs').readFileSync('skills/elendil-processing/scripts/pjsr/elendil-helpers.js','utf8'))"
+      - name: Manifests and skill front matter
+        run: |
+          python - <<'PY'
+          import json, re, pathlib
+          for f in pathlib.Path('.claude-plugin').glob('*.json'):
+              json.loads(f.read_text())
+          for skill in pathlib.Path('skills').iterdir():
+              text = (skill / 'SKILL.md').read_text()
+              m = re.match(r'^---\n(.*?)\n---\n', text, re.S)
+              assert m, f'{skill}: no front matter'
+              assert re.search(rf'^name: {skill.name}$', m.group(1), re.M), f'{skill}: name must match folder'
+              assert 'description:' in m.group(1), f'{skill}: no description'
+          print('ok')
+          PY

@@ -1,8 +1,8 @@
-# elendil-pixinsight
+# astroagent
 
 Agent skills to process astrophotography campaigns of the **Elendil** rig (Askar 91F, ZWO ASI585MC Air, Askar D1/D2 dual-band filters) from the **Nebulis** library to a finished image in **PixInsight**, with an AI agent (Claude Code or OpenCode) that proposes every stage and waits for your approval.
 
-Nothing here modifies PixInsight or the connector: PixInsight is operated through [pixinsight-connector](https://github.com/mxcoppell/pixinsight-connector), used as published on npm. This repository holds only knowledge (skills) and two small scripts.
+Nothing here modifies PixInsight or the connector: PixInsight is operated through [pixinsight-connector](https://github.com/mxcoppell/pixinsight-connector), used as published on npm. This repository holds only knowledge (skills), a Nebulis client script and a PJSR helper.
 
 | Skill | What it does |
 |---|---|
@@ -58,21 +58,35 @@ npx skills add mxcoppell/pixinsight-connector-skills
 
 ### 2. These skills
 
+Claude Code, as a plugin:
+
 ```sh
-git clone <this repository> ~/Repositories/elendil-pixinsight
-~/Repositories/elendil-pixinsight/install.sh
+claude plugin marketplace add jjmartres/astroagent
+claude plugin install astroagent@astroagent
 ```
 
-`install.sh` links both skills into `~/.claude/skills/`. Claude Code reads them there, and OpenCode reads `~/.claude/skills/` as well, so one link serves both. Pull the repository to update; the links follow.
+The plugin does not register the `pixinsight` MCP server: use the one from step 1 (or from the
+pixinsight-connector-skills plugin), never two, since two connectors compete for PixInsight's script slot.
+
+OpenCode, or Claude Code without the plugin system:
+
+```sh
+git clone https://github.com/jjmartres/astroagent ~/Repositories/astroagent
+~/Repositories/astroagent/install.sh
+```
+
+`install.sh` links both skills into `~/.claude/skills/`, which Claude Code and OpenCode both read. `git pull` updates them.
+
+Any Agent Skills harness: `npx skills add jjmartres/astroagent`.
 
 ### 3. Nebulis credentials
 
 ```sh
 mkdir -p ~/.config/nebulis
-cp ~/Repositories/elendil-pixinsight/config/nebulis.env.example ~/.config/nebulis/env
+cp ~/Repositories/astroagent/config/nebulis.env.example ~/.config/nebulis/env
 chmod 600 ~/.config/nebulis/env
 $EDITOR ~/.config/nebulis/env        # NEBULIS_URL and NEBULIS_API_KEY
-python3 ~/.claude/skills/nebulis/scripts/nebulis.py status
+python3 ~/.claude/skills/nebulis/scripts/nebulis.py status   # with the plugin: the skill's folder under ~/.claude/plugins
 ```
 
 ### 4. WBPP, once
@@ -105,7 +119,7 @@ The tests run `nebulis.py` against a local mock of the Nebulis API. The PixInsig
 
 ## Status
 
-Version 0.1.0, not yet run end to end on real data. Every processing value in the skills is a starting point; tune it on your data and commit the values that work.
+Version 0.1.0, not yet run end to end on real data. See `CHANGELOG.md`. Every processing value in the skills is a starting point; tune it on your data and commit the values that work.
 
 ## Credits
 

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Link the elendil-pixinsight skills into ~/.claude/skills (read by Claude Code and by OpenCode).
+# Link the astroagent skills into ~/.claude/skills (read by Claude Code and by OpenCode).
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 dest="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"

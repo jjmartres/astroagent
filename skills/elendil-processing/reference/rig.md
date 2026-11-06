@@ -47,7 +47,7 @@ Sensor temperature: TEC set to −8 °C for all campaigns, except Sh2-131 which 
 
 ## Site
 
-Verrens-Arvey, Savoie, France: about 45° N, 750 m, Bortle 3-4. Nights of about 5-6 usable hours; light-pollution gradients are usually mild, so a heavy gradient on a single night points at clouds, dew or twilight.
+Savoie, France: about 45° N, 750 m, Bortle 3-4. Nights of about 5-6 usable hours; light-pollution gradients are usually mild, so a heavy gradient on a single night points at clouds, dew or twilight.
 
 ## Software on the processing Mac
 
