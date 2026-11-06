@@ -1,0 +1,146 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jjmartres/astroagent/skills/astro-project/reference/rig.schema.json",
+  "title": "astroagent campaign description (rig.json)",
+  "description": "Target, site, optics, camera, filters and acquisition sequences of one processed campaign. Built by `astro_project.py scan` from the Nebulis export, the FITS headers and Nebulis profiles; gaps filled by the user.",
+  "type": "object",
+  "required": ["target", "capture_location", "camera", "telescope", "filters", "tec_setpoint_c", "binning", "sequences"],
+  "properties": {
+    "target": {
+      "type": "object",
+      "required": ["name", "coordinates_j2000"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "common_name": { "type": "string" },
+        "aliases": { "type": "array", "items": { "type": "string" } },
+        "object_type": { "type": "string" },
+        "constellation": { "type": "string" },
+        "coordinates_j2000": {
+          "type": "object",
+          "required": ["ra", "dec"],
+          "properties": {
+            "ra": { "type": "string", "minLength": 1 },
+            "dec": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "capture_location": {
+      "type": "object",
+      "required": ["site", "latitude", "longitude", "bortle"],
+      "properties": {
+        "site": { "type": "string", "minLength": 1 },
+        "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+        "longitude": { "type": "number", "minimum": -180, "maximum": 180 },
+        "elevation_m": { "type": ["number", "null"] },
+        "bortle": { "type": "integer", "minimum": 1, "maximum": 9 }
+      }
+    },
+    "camera": {
+      "type": "object",
+      "required": ["model", "pixel_size_um"],
+      "properties": {
+        "model": { "type": "string", "minLength": 1 },
+        "sensor": { "type": "string" },
+        "sensor_type": { "type": "string", "enum": ["color", "mono"] },
+        "bayer_pattern": { "type": "string" },
+        "resolution_px": { "type": "string", "pattern": "^[0-9]+x[0-9]+$" },
+        "pixel_size_um": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "telescope": {
+      "type": "object",
+      "required": ["model", "focal_length_mm"],
+      "properties": {
+        "model": { "type": "string", "minLength": 1 },
+        "aperture_mm": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+        "focal_length_mm": { "type": "number", "exclusiveMinimum": 0 },
+        "focal_ratio": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+        "image_scale_arcsec_px": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "mount": { "type": "string" },
+    "filters": {
+      "type": "object",
+      "description": "FILTER header value -> description (vendor, model, passbands, bandwidth)",
+      "minProperties": 1,
+      "additionalProperties": { "type": "string" }
+    },
+    "tec_setpoint_c": { "type": "number" },
+    "binning": { "type": "integer", "minimum": 1 },
+    "sequences": {
+      "type": "object",
+      "required": ["lights", "darks", "flats"],
+      "properties": {
+        "lights": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["filter", "exposure_s", "bin", "subs"],
+            "properties": {
+              "filter": { "type": "string" },
+              "exposure_s": { "type": "number", "exclusiveMinimum": 0 },
+              "gain": { "type": ["integer", "null"], "minimum": 0 },
+              "bin": { "type": "integer", "minimum": 1 },
+              "subs": { "type": "integer", "minimum": 0 },
+              "subs_total": { "type": "integer", "minimum": 0 },
+              "temp_c": { "type": ["number", "null"] },
+              "dates": { "type": "array", "items": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" } }
+            }
+          }
+        },
+        "darks": { "$ref": "#/definitions/calibration" },
+        "flats": { "$ref": "#/definitions/calibration" },
+        "biases": { "$ref": "#/definitions/calibration" },
+        "flat_darks": { "$ref": "#/definitions/calibration" }
+      }
+    },
+    "nights": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["date", "filter", "exposure_s", "subs"],
+        "properties": {
+          "date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+          "filter": { "type": "string" },
+          "exposure_s": { "type": "number" },
+          "gain": { "type": ["integer", "null"] },
+          "bin": { "type": ["integer", "null"] },
+          "temp_c": { "type": ["number", "null"] },
+          "subs": { "type": "integer", "minimum": 0 },
+          "subs_total": { "type": "integer", "minimum": 0 },
+          "darks": { "type": ["integer", "null"] },
+          "flats": { "type": ["integer", "null"] },
+          "biases": { "type": ["integer", "null"] },
+          "flat_darks": { "type": ["integer", "null"] }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Where each filled field came from: fits, nebulis-object, nebulis-telescope, nebulis-site, manifest, user, computed",
+      "additionalProperties": { "type": "string" }
+    }
+  },
+  "definitions": {
+    "calibration": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "subs"],
+        "properties": {
+          "name": { "type": "string" },
+          "filter": { "type": ["string", "null"] },
+          "exposure_s": { "type": ["number", "null"] },
+          "gain": { "type": ["integer", "null"] },
+          "bin": { "type": ["integer", "null"] },
+          "temp_c": { "type": ["number", "null"] },
+          "subs": { "type": "integer", "minimum": 0 },
+          "source": { "type": "string", "enum": ["attached", "matched"] },
+          "dates": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

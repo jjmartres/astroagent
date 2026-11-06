@@ -20,9 +20,15 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - name: nebulis.py keeps Python 3.9 syntax (macOS system Python)
-        run: python -c "import ast; ast.parse(open('skills/nebulis/scripts/nebulis.py').read(), feature_version=(3, 9))"
-      - name: nebulis.py tests
+      - name: Scripts keep Python 3.9 syntax (macOS system Python)
+        run: |
+          python - <<'PY'
+          import ast, pathlib
+          for f in pathlib.Path('skills').glob('*/scripts/*.py'):
+              ast.parse(f.read_text(), feature_version=(3, 9))
+              print('ok', f)
+          PY
+      - name: Tests
         run: python -m unittest discover -s tests -v
       - name: PJSR helpers parse
         run: node -e "new Function(require('fs').readFileSync('skills/astro-processing/scripts/pjsr/astro-helpers.js','utf8'))"
@@ -40,5 +46,6 @@ jobs:
               assert m, f'{skill}: no front matter'
               assert re.search(rf'^name: {skill.name}$', m.group(1), re.M), f'{skill}: name must match folder'
               assert 'description:' in m.group(1), f'{skill}: no description'
+          json.loads(pathlib.Path('skills/astro-project/reference/rig.schema.json').read_text())
           print('ok')
           PY

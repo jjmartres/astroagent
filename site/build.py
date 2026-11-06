@@ -156,7 +156,7 @@ def page(lang):
         + "</ol></li>" for pk, steps in phases)
     gains = "".join(f'<article class="gain">{icon(f"g{i}")}<h3>{esc(t[f"g{i}"])}</h3><p>{esc(t[f"g{i}d"])}</p></article>'
                     for i in range(1, 7))
-    know = "".join(f'<li><h4>{esc(t[f"f{i}"])}</h4><p>{esc(t[f"f{i}d"])}</p></li>' for i in range(1, 4))
+    know = "".join(f'<li><h4>{esc(t[f"f{i}"])}</h4><p>{esc(t[f"f{i}d"])}</p></li>' for i in (1, 2, 3, 7))
     loop = "".join(f'<li><span class="step">{i}</span><h3>{esc(t[f"l{i}"])}</h3><p>{esc(t[f"l{i}d"])}</p></li>' for i in range(1, 4))
     chat = render_session(u)
     tips = "".join(f'<li><h4>{esc(h)}</h4><p>{esc(p)}</p></li>' for h, p in u["tips"])
@@ -230,7 +230,7 @@ def page(lang):
         <div class="cc-body"><div class="cc-log">{chat}</div>
           <div class="cc-status" aria-hidden="true"><span class="star">✻</span> <span class="lbl"></span> <span class="sec"></span></div>
           <div class="cc-input"><span class="p">&gt;</span><span class="typed"></span><span class="cursor"></span></div>
-          <div class="cc-hint"><span>? for shortcuts</span><span>astro-processing · nebulis</span></div>
+          <div class="cc-hint"><span>? for shortcuts</span><span>astro-processing · astro-project · nebulis</span></div>
         </div>
       </figure>
       <p class="caption">{esc(u["caption"])}</p>

@@ -14,6 +14,7 @@ script, and never put on a command line.
 Commands:
   status                                  server version and an authenticated test call
   objects [--search TEXT]                 library objects
+  object OBJECT                           one object: type, constellation, coordinates, distance, size
   sessions OBJECT                         nights of one object, with filters, exposures, sub counts
   analysis OBJECT DATE [--bad-only]       Frame Analysis report of one night (grades, flags, kept)
   review --keep|--reject|--reset PATH...  record your keep / reject call on frames (admin key)
@@ -22,6 +23,8 @@ Commands:
   fetch OBJECT (--dates D [D ...] | --all) --dest DIR [--layout wbpp|siril] [--include-not-kept]
         [--allow-warnings] [--force]       download the stacking export and unpack it under DIR
   archives OBJECT                         project archives stored with the object
+  telescopes                              telescope profiles: model, optical configs, filters
+  site                                    the active observing site: coordinates, Bortle class
   push OBJECT (--file FILE | --bundle DIR) [--title T] [--notes N] [--software S]
                                           upload a .zip/.xpsm/.pxiproject (admin key); --bundle
                                           zips a folder first
@@ -242,6 +245,50 @@ def cmd_objects(c: Client, args):
     out(args, objs, "\n".join(rows) or "no objects")
 
 
+def find_object(c: Client, name: str) -> dict:
+    objs = c.call("GET", "/library/objects") or []
+    if isinstance(objs, dict):
+        objs = objs.get("items") or objs.get("objects") or []
+    n = name.lower()
+    for o in objs:
+        if n in (str(o.get("id", "")).lower(), str(o.get("folderName", "")).lower(), str(o.get("catalogId", "")).lower()):
+            return o
+    die(f"no library object {name!r}; list them with: nebulis.py objects --search {name}", 1)
+
+
+def cmd_object(c: Client, args):
+    o = find_object(c, args.object)
+    keys = [("type", "type"), ("constellation", "constellation"), ("ra", "RA"), ("dec", "Dec"),
+            ("magnitude", "magnitude"), ("distanceLy", "distance (ly)"), ("sizeArcmin", "size (arcmin)")]
+    rows = [f"{o.get('id')}  {o.get('name', '')}"] + [f"  {label:<14} {o.get(k)}" for k, label in keys if o.get(k) not in (None, "")]
+    out(args, o, "\n".join(rows))
+
+
+def cmd_telescopes(c: Client, args):
+    ts = c.call("GET", "/telescopes") or []
+    rows = []
+    for t in ts:
+        rig = t.get("rig") or {}
+        rows.append(f"{t.get('id')}  {t.get('name', '')} · {t.get('model', '')} · {rig.get('sensorType') or '?'} sensor · "
+                    f"filters {', '.join(rig.get('filters') or t.get('usedFilters') or []) or '-'}")
+        for oc in t.get("opticalConfigs") or []:
+            rows.append(f"    optics {oc.get('name')}: {oc.get('focalLengthMm')} mm, pixel {oc.get('pixelSizeUm')} µm, "
+                        f"sensor {oc.get('sensorWidthMm')} × {oc.get('sensorHeightMm')} mm"
+                        f"{' (active)' if oc.get('id') == t.get('activeOpticalConfigId') else ''}")
+    # connection details and credentials are never printed, even masked
+    hidden = ("password", "transports", "username", "hostname", "shareName", "localPath")
+    slim = [{k: v for k, v in t.items() if k not in hidden} for t in ts]
+    out(args, slim, "\n".join(rows) or "no telescopes")
+
+
+def cmd_site(c: Client, args):
+    s = c.call("GET", "/sites/active")
+    if not s:
+        die("no active observing site; choose one in Nebulis, Settings → Sky", 1)
+    slim = {k: s.get(k) for k in ("id", "name", "latitude", "longitude", "timezone", "bortleClass", "darkness")}
+    out(args, slim, f"{s.get('name')} · {s.get('latitude')}, {s.get('longitude')} · Bortle {s.get('bortleClass') or '?'} · {s.get('timezone')}")
+
+
 def cmd_sessions(c: Client, args):
     ss = c.call("GET", f"/library/objects/{q(args.object)}/sessions") or []
     rows = [f"{s['date']}  filters {','.join(s.get('filters') or []) or '-':<14} exposures "
@@ -427,6 +474,8 @@ def main(argv: list[str] | None = None) -> None:
 
     sub.add_parser("status")
     s = sub.add_parser("objects"); s.add_argument("--search")
+    s = sub.add_parser("object"); s.add_argument("object")
+    sub.add_parser("telescopes"); sub.add_parser("site")
     s = sub.add_parser("sessions"); s.add_argument("object")
     s = sub.add_parser("analysis"); s.add_argument("object"); s.add_argument("date")
     s.add_argument("--bad-only", action="store_true", help="only frames not kept or graded fair")
@@ -453,7 +502,8 @@ def main(argv: list[str] | None = None) -> None:
     args = p.parse_args(argv)
     base, key = load_config()
     c = Client(base, key)
-    handlers = {"status": cmd_status, "objects": cmd_objects, "sessions": cmd_sessions, "analysis": cmd_analysis,
+    handlers = {"status": cmd_status, "objects": cmd_objects, "object": cmd_object,
+                "telescopes": cmd_telescopes, "site": cmd_site, "sessions": cmd_sessions, "analysis": cmd_analysis,
                 "review": cmd_review, "plan": cmd_plan, "fetch": cmd_fetch, "archives": cmd_archives,
                 "push": cmd_push}
     try:

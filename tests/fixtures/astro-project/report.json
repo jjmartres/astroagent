@@ -1,0 +1,125 @@
+{
+  "target": "Sh2-105",
+  "date": "2026-11-06",
+  "palette": "Foraxx",
+  "path": "narrowband",
+  "summary": "Nine nights in D1 and D2, 958 subs kept, processed to a Foraxx-style palette.",
+  "stages": [
+    {
+      "n": 1,
+      "name": "Target and nights",
+      "status": "done",
+      "summary": "9 nights, narrowband path",
+      "decision": "all 9 nights"
+    },
+    {
+      "n": 2,
+      "name": "Sub review",
+      "status": "done",
+      "measured": "962 of 1000 kept by Frame Analysis; 4 soft frames on 09-08 (FWHM 3.4 px vs 2.6)",
+      "decision": "reject the 4 soft frames"
+    },
+    {
+      "n": 5,
+      "name": "WBPP stacking",
+      "status": "done",
+      "auto": true,
+      "params": {
+        "rejection": "Auto",
+        "local_normalization": true,
+        "keywords": "NIGHT (pre)"
+      },
+      "gates": [
+        {
+          "id": "G2",
+          "measure": "masters are 3-channel",
+          "value": "3",
+          "threshold": "3",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "n": 6,
+      "name": "Masters",
+      "status": "done",
+      "params": {
+        "run_bxt": {
+          "correct_only": true
+        }
+      },
+      "gates": [
+        {
+          "id": "G3",
+          "measure": "astrometry error",
+          "value": "0.08 px",
+          "threshold": "< 0.5 px",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "n": 9,
+      "name": "Stars out, stretch",
+      "status": "done",
+      "measured": "s1 median 0.12, s2 0.18, s3 0.25 (clips 0.14 %)",
+      "proposal": "three stretch candidates",
+      "why": "same median per channel balances Ha and OIII",
+      "decision": "s2",
+      "gates": [
+        {
+          "id": "G7",
+          "measure": "pixels clipped to white",
+          "value": "0.14 %",
+          "threshold": "≤ 0.1 %",
+          "pass": false,
+          "note": "s3 rejected, s1 and s2 kept"
+        }
+      ]
+    },
+    {
+      "n": 11,
+      "name": "Export",
+      "status": "done",
+      "gates": [
+        {
+          "id": "G9",
+          "measure": "image is non-linear",
+          "value": "median 0.18",
+          "threshold": "> 0.05",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "n": 12,
+      "name": "Log and push",
+      "status": "done",
+      "decision": "stored with Sh2-105 in Nebulis"
+    }
+  ],
+  "integration": [
+    {
+      "filter": "D1",
+      "subs_kept": 3,
+      "subs_total": 4,
+      "exposure_s": 180
+    },
+    {
+      "filter": "D2",
+      "subs_kept": 2,
+      "subs_total": 2,
+      "exposure_s": 180
+    }
+  ],
+  "outputs": [
+    "output/final/Sh2-105_Foraxx_2026-11-06.xisf",
+    "output/final/Sh2-105_Foraxx_2026-11-06_web.jpg"
+  ],
+  "environment": {
+    "PixInsight": "1.9.5",
+    "pixinsight-connector": "2.5.2",
+    "BlurXTerminator": "2.0",
+    "Nebulis": "2.2.0"
+  }
+}

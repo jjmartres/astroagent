@@ -1,0 +1,13 @@
+{"v": 1, "type": "session", "connectorVersion": "2.5.2"}
+{"v": 1, "type": "call_start", "seq": 1, "tool": "run_bxt", "input": {"view_id": "Ha", "sharpen_nonstellar": 0.6}, "ts": "2026-11-06T10:00:00Z"}
+{"v": 1, "type": "bridge", "seq": 1, "tool": "run_bxt", "code": "var __w = ImageWindow.windowById('Ha');\n      var P = new BlurXTerminator;\n      P.correct_only = false;\n      P.sharpen_nonstellar = 0.6;\n      P.sharpen_stars = 0.5;\n      P.adjust_star_halos = 0;\n      \n      __run(P, __w.mainView);"}
+{"v": 1, "type": "call_end", "seq": 1, "tool": "run_bxt", "result": {"content": [{"type": "text", "text": "BXT complete (sharpen). median=0.001"}]}}
+{"v": 1, "type": "call_start", "seq": 2, "tool": "get_image_stats", "input": {"view_id": "Ha"}, "ts": "2026-11-06T10:01:00Z"}
+{"v": 1, "type": "bridge", "seq": 2, "tool": "get_image_stats", "code": "var P = new SCNR; P.executeOn(x);"}
+{"v": 1, "type": "call_end", "seq": 2, "tool": "get_image_stats", "result": {}}
+{"v": 1, "type": "call_start", "seq": 3, "tool": "run_pixelmath", "input": {"view_id": "HOO"}, "ts": "2026-11-06T10:02:00Z"}
+{"v": 1, "type": "bridge", "seq": 3, "tool": "run_pixelmath", "code": "var PM = new PixelMath;\nPM.expression = \"Ha; 0.5*Ha+0.5*OIII; OIII\";\nPM.useSingleExpression = false;\nPM.createNewImage = true;\nPM.newImageId = \"HOO\";\nPM.executeGlobal();"}
+{"v": 1, "type": "call_end", "seq": 3, "tool": "run_pixelmath", "result": {"content": [{"type": "text", "text": "ok"}]}}
+{"v": 1, "type": "call_start", "seq": 4, "tool": "run_nxt", "input": {"view_id": "HOO"}, "ts": "2026-11-06T10:03:00Z"}
+{"v": 1, "type": "bridge", "seq": 4, "tool": "run_nxt", "code": "var P = new NoiseXTerminator;\nP.denoise = 0.8;\n__run(P, __w.mainView);"}
+{"v": 1, "type": "call_end", "seq": 4, "tool": "run_nxt", "result": {"isError": true, "content": [{"type": "text", "text": "NXT FAILED"}]}}

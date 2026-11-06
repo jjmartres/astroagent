@@ -57,7 +57,7 @@ LANGS = {
         "rq_title": "Requirements",
         "rq": ["PixInsight 1.9.5 or later, with BlurXTerminator, NoiseXTerminator and StarXTerminator", "Node.js 22 or later and Python 3.9 or later", "A Nebulis server and an API key (admin to record reviews and upload results)", "Any coding agent that reads Agent Skills (Claude Code, OpenCode…)"],
         "st_title": "Version",
-        "st": "0.1.0",
+        "st": "0.2.0",
         "ft_credits": "Built on pixinsight-connector and its companion skills by Min Xie, and on Nebulis. MIT licence.",
         "ft_scope": "Built around my scope: Askar 91F, ZWO ASI585MC Air, Askar D1/D2 filters.",
         "lang_switch": "Language",
@@ -120,7 +120,7 @@ LANGS = {
         "rq_title": "Prérequis",
         "rq": ["PixInsight 1.9.5 ou plus, avec BlurXTerminator, NoiseXTerminator et StarXTerminator", "Node.js 22 ou plus et Python 3.9 ou plus", "Un serveur Nebulis et une clé d'API (admin pour enregistrer les revues et renvoyer les résultats)", "Un agent de code compatible Agent Skills (Claude Code, OpenCode…)"],
         "st_title": "Version",
-        "st": "0.1.0",
+        "st": "0.2.0",
         "ft_credits": "Construit sur pixinsight-connector et ses skills compagnons de Min Xie, et sur Nebulis. Licence MIT.",
         "ft_scope": "Conçu autour de mon setup : Askar 91F, ZWO ASI585MC Air, filtres Askar D1/D2.",
         "lang_switch": "Langue",
@@ -183,7 +183,7 @@ LANGS = {
         "rq_title": "Requisitos",
         "rq": ["PixInsight 1.9.5 o posterior, con BlurXTerminator, NoiseXTerminator y StarXTerminator", "Node.js 22 o posterior y Python 3.9 o posterior", "Un servidor Nebulis y una clave de API (de administrador para guardar revisiones y subir resultados)", "Un agente de código compatible con Agent Skills (Claude Code, OpenCode…)"],
         "st_title": "Versión",
-        "st": "0.1.0",
+        "st": "0.2.0",
         "ft_credits": "Construido sobre pixinsight-connector y sus skills complementarios de Min Xie, y sobre Nebulis. Licencia MIT.",
         "ft_scope": "Pensado para mi equipo: Askar 91F, ZWO ASI585MC Air, filtros Askar D1/D2.",
         "lang_switch": "Idioma",
@@ -246,7 +246,7 @@ LANGS = {
         "rq_title": "Requisiti",
         "rq": ["PixInsight 1.9.5 o successivo, con BlurXTerminator, NoiseXTerminator e StarXTerminator", "Node.js 22 o successivo e Python 3.9 o successivo", "Un server Nebulis e una chiave API (di amministratore per salvare le revisioni e caricare i risultati)", "Un agente di coding compatibile con le Agent Skills (Claude Code, OpenCode…)"],
         "st_title": "Versione",
-        "st": "0.1.0",
+        "st": "0.2.0",
         "ft_credits": "Basato su pixinsight-connector e sulle skill di accompagnamento di Min Xie, e su Nebulis. Licenza MIT.",
         "ft_scope": "Pensato attorno al mio setup: Askar 91F, ZWO ASI585MC Air, filtri Askar D1/D2.",
         "lang_switch": "Lingua",
@@ -269,7 +269,7 @@ NEW = {
         "g3": "Problems caught early", "g3d": "Nine measured quality gates, from astrometry to clipped pixels. A failed gate stops the stage and says why.",
         "g4": "Learn as you go", "g4d": "Every proposal comes with its measurement and its reason, so you see why a value was chosen, not just the result.",
         "g5": "Raw data stays safe", "g5d": "Inputs are read-only, a checkpoint precedes every destructive step, and one command undoes it.",
-        "g6": "Reproducible", "g6d": "PROCESSING.md records every step, parameter and gate. Re-run it next season or publish it with the image.",
+        "g6": "Documented for you", "g6d": "A documentation page, a session report of every decision, the PixInsight project description and process icons with the values actually applied. AstroBin fields on request.",
         "how_eyebrow": "How it works", "how_title": "One loop, twelve stages",
         "how_lead": "Every stage follows the same three beats, from sub review to the final export.",
         "l1": "You ask", "l1d": "In plain words: “process Sh2-105”, “continue”, “denoise 0.4”.",
@@ -293,7 +293,7 @@ NEW = {
         "g3": "Les problèmes détectés tôt", "g3d": "Neuf contrôles qualité mesurés, de l'astrométrie aux pixels saturés. Un contrôle échoué arrête l'étape et dit pourquoi.",
         "g4": "Vous apprenez en route", "g4d": "Chaque proposition arrive avec sa mesure et sa raison : vous voyez pourquoi une valeur est choisie, pas seulement le résultat.",
         "g5": "Les données brutes protégées", "g5d": "Entrées en lecture seule, un point de reprise avant chaque étape destructive, une commande pour annuler.",
-        "g6": "Reproductible", "g6d": "PROCESSING.md consigne chaque étape, paramètre et contrôle. Rejouez-le la saison suivante ou publiez-le avec l'image.",
+        "g6": "Documenté pour vous", "g6d": "Une page de documentation, un rapport de session de chaque décision, la description du projet PixInsight et des icônes de process avec les valeurs réellement appliquées. Les champs AstroBin sur demande.",
         "how_eyebrow": "Fonctionnement", "how_title": "Une boucle, douze étapes",
         "how_lead": "Chaque étape suit les trois mêmes temps, de la revue des subs à l'export final.",
         "l1": "Vous demandez", "l1d": "En langage courant : « traite Sh2-105 », « continue », « denoise 0,4 ».",
@@ -317,7 +317,7 @@ NEW = {
         "g3": "Problemas detectados a tiempo", "g3d": "Nueve controles de calidad medidos, de la astrometría a los píxeles saturados. Un control fallido detiene la etapa y explica por qué.",
         "g4": "Aprendes sobre la marcha", "g4d": "Cada propuesta llega con su medida y su motivo: ves por qué se elige un valor, no solo el resultado.",
         "g5": "Los datos brutos, a salvo", "g5d": "Entradas de solo lectura, un punto de restauración antes de cada paso destructivo y un comando para deshacer.",
-        "g6": "Reproducible", "g6d": "PROCESSING.md registra cada paso, parámetro y control. Repítelo la próxima temporada o publícalo con la imagen.",
+        "g6": "Documentado para ti", "g6d": "Una página de documentación, un informe de sesión de cada decisión, la descripción del proyecto de PixInsight e iconos de proceso con los valores realmente aplicados. Los campos de AstroBin si los pides.",
         "how_eyebrow": "Cómo funciona", "how_title": "Un bucle, doce etapas",
         "how_lead": "Cada etapa sigue los mismos tres tiempos, de la revisión de tomas a la exportación final.",
         "l1": "Tú pides", "l1d": "Con tus palabras: «procesa Sh2-105», «continúa», «denoise 0,4».",
@@ -341,7 +341,7 @@ NEW = {
         "g3": "Problemi scoperti subito", "g3d": "Nove controlli di qualità misurati, dall'astrometria ai pixel saturati. Un controllo fallito ferma la fase e spiega perché.",
         "g4": "Impari strada facendo", "g4d": "Ogni proposta arriva con la sua misura e il suo motivo: vedi perché un valore è stato scelto, non solo il risultato.",
         "g5": "I dati grezzi al sicuro", "g5d": "Input in sola lettura, un punto di ripristino prima di ogni passo distruttivo e un comando per annullare.",
-        "g6": "Riproducibile", "g6d": "PROCESSING.md registra ogni passo, parametro e controllo. Rieseguilo la prossima stagione o pubblicalo con l'immagine.",
+        "g6": "Documentato per te", "g6d": "Una pagina di documentazione, un report di sessione di ogni decisione, la descrizione del progetto PixInsight e icone di processo con i valori realmente applicati. I campi AstroBin su richiesta.",
         "how_eyebrow": "Come funziona", "how_title": "Un ciclo, dodici fasi",
         "how_lead": "Ogni fase segue gli stessi tre tempi, dalla revisione dei sub all'esportazione finale.",
         "l1": "Tu chiedi", "l1d": "A parole tue: «elabora Sh2-105», «continua», «denoise 0,4».",
@@ -403,4 +403,15 @@ PI = {
     },
 }
 for _lang, _texts in PI.items():
+    LANGS[_lang].update(_texts)
+
+
+# "Built for your data": the project described from the data itself (astro-project skill).
+F7 = {
+    "en": {"f7": "Your project, described", "f7d": "rig.json is read from the FITS headers and your Nebulis telescope and site: optics, camera, filters, every night. You are asked only for what none of them holds."},
+    "fr": {"f7": "Votre projet, décrit", "f7d": "rig.json est lu dans les en-têtes FITS et dans votre télescope et votre site Nebulis : optique, caméra, filtres, chaque nuit. On ne vous demande que ce qu'aucun d'eux ne contient."},
+    "es": {"f7": "Tu proyecto, descrito", "f7d": "rig.json se lee de las cabeceras FITS y de tu telescopio y tu sitio en Nebulis: óptica, cámara, filtros, cada noche. Solo se te pregunta lo que ninguno de ellos contiene."},
+    "it": {"f7": "Il tuo progetto, descritto", "f7d": "rig.json è letto dalle intestazioni FITS e dal tuo telescopio e sito in Nebulis: ottica, camera, filtri, ogni notte. Ti viene chiesto solo ciò che nessuno di essi contiene."},
+}
+for _lang, _texts in F7.items():
     LANGS[_lang].update(_texts)

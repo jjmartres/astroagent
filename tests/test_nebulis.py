@@ -43,6 +43,26 @@ class NebulisCliTest(unittest.TestCase):
         self.assertIn("401", r.stderr)
         self.assertNotIn("neb-wrong", r.stdout + r.stderr)
 
+    def test_object(self):
+        r = self.run_cli("object", "sh2-105")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("Cygnus", r.stdout)
+        r = self.run_cli("--json", "object", "Sh2-105")
+        self.assertEqual(json.loads(r.stdout)["distanceLy"], 5000)
+        self.assertEqual(self.run_cli("object", "M999").returncode, 1)
+
+    def test_telescopes_hide_credentials(self):
+        r = self.run_cli("--json", "telescopes")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        t = json.loads(r.stdout)[0]
+        self.assertNotIn("password", t)
+        self.assertNotIn("transports", t)
+        self.assertEqual(t["opticalConfigs"][0]["focalLengthMm"], 609)
+
+    def test_site(self):
+        r = self.run_cli("site")
+        self.assertIn("Bortle 4", r.stdout)
+
     def test_sessions_sorted(self):
         r = self.run_cli("sessions", "Sh2-105")
         self.assertEqual(r.returncode, 0, r.stderr)

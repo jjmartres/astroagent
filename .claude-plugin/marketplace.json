@@ -9,7 +9,7 @@
     {
       "name": "astroagent",
       "source": "./",
-      "description": "Astro processing workflow and Nebulis client skills. Uses the pixinsight MCP server registered by pixinsight-connector-skills or by hand."
+      "description": "Astro processing workflow, project documentation and Nebulis client skills. Uses the pixinsight MCP server registered by pixinsight-connector-skills or by hand."
     }
   ]
 }

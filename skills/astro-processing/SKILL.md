@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: jjmartres
-  version: "0.1.0"
+  version: "0.2.0"
 ---
 
 # Astro processing
@@ -36,14 +36,14 @@ Before the first stage, read these files next to this one, once per session:
 2. **One PixInsight call at a time.** Read every result. `FAILED`, `REFUSED`, `BLOCKED`, `View not found` or `STOPPED BY USER` needs a decision, not a blind retry. After `STOPPED BY USER`, stop; call `resume_bridge` only when the user says so. If the `pixinsight-connector-troubleshooting` skill is installed, use it for tool pitfalls.
 3. **Raw data is read-only.** Never write, move or delete anything under `<workspace>/data/` or a Nebulis library path. Working files go to `<workspace>/agentic/work/`, deliverables to `<workspace>/output/`. The connector already refuses other paths for its own writes; keep shell writes to the same two folders.
 4. **Checkpoint before every destructive step**: `clone_image` to `<view>_cp<stage>`; reject = `restore_from_clone`. Keep at most the last two checkpoints per view, close older ones.
-5. **Never invent a value.** Rig facts come from `reference/rig.md`, data facts from FITS headers, `scan_workspace` or the Nebulis manifest, everything else from the user. Ask once, in one message, for what is missing.
+5. **Never invent a value.** Rig facts come from `<workspace>/output/rig.json` once the `astro-project` skill has built it (it is read from this data's FITS headers and wins), otherwise from `reference/rig.md`; data facts from FITS headers, `scan_workspace` or the Nebulis manifest; everything else from the user. Ask once, in one message, for what is missing.
 6. **Do not retype measured numbers by hand when a tool can carry them**; when you must (OIII weights, crop amounts), write the arithmetic in the log.
 7. **Log as you go**: append one row per PixInsight call to the call log (see `reference/processing-log.md`).
 8. Tool names are bare here; the host may prefix them (`mcp__pixinsight__run_bxt`).
 
 ## Session file
 
-Keep `<workspace>/agentic/work/astro-session.md` up to date: object, nights, filter sets, path (narrowband or broadband), stage status (`todo` / `done` / `skipped`), approved parameters, stages allowed to run without waiting, open views and their roles. On resume, read it first and continue from the first stage not `done`.
+Keep `<workspace>/agentic/work/astro-session.md` up to date: object, nights, filter sets, path (narrowband or broadband), stage status (`todo` / `done` / `skipped`), for each stage what was measured, what you proposed, the user's decision, the parameters applied and the gate values (the `astro-project` session report is built from them), stages allowed to run without waiting, open views and their roles. On resume, read it first and continue from the first stage not `done`.
 
 ## Stage 0 — Setup
 
@@ -68,6 +68,8 @@ Per night: `nebulis.py analysis <OBJECT> <DATE> --bad-only`. Report per night: m
 
 `nebulis.py fetch <OBJECT> --dates <...> --dest <workspace>/data [--allow-warnings]` (only with the warnings acknowledged in Stage 3). Check the reported light count equals the plan. Read `<export>/manifest.json` and `README.txt`; record nights, groups and integration per filter in the session file.
 
+Then bootstrap the project with the `astro-project` skill: § 1 builds and validates `output/rig.json` from the manifest, the FITS headers and Nebulis (ask the user, once, only for what it reports missing), § 3 writes `output/project.json`. Do § 2 (object research, `output/research.json`) while WBPP runs in Stage 5.
+
 ## Stage 5 — Stack (WBPP)
 
 `run_wbpp` with `input_dirs: ["<workspace>/data/<export folder>"]`, `output_dir: "wbpp"`, `keywords: [{name: "NIGHT", mode: "pre"}]` when there are several nights (each night calibrated with its own flats, as Nebulis laid them out), `rejection: "Auto"`, `weights: "PSFSignal"`, `local_normalization: true`, `autocrop: false` (the crop is done once, identically, in Stage 6). Drizzle only if the user asks (`drizzle_scale`). Poll `wbpp_status` every few minutes; report progress, never start a second run. **Gate G2** (`reference/quality-gates.md`). If a master is mono (one channel), WBPP did not debayer: stop, ask the user to enable CFA/debayer in the WBPP dialog once (saved settings apply to automation), then re-run.
@@ -77,7 +79,7 @@ Per night: `nebulis.py analysis <OBJECT> <DATE> --bad-only`. Report per night: m
 1. `open_image` each master from `<workspace>/output/wbpp/master/`; `rename_view` to `D1`, `D2` or `RGB` (broadband). `get_image_dimensions`: all masters of one target must match; if not, `align_to_reference` onto `D1` (or the deepest master).
 2. Common crop: `run_pjsr` with `include: ["<this skill's folder>/scripts/pjsr/astro-helpers.js"]` and code `JSON.stringify(commonBorders(["D1","D2"]))`. `crop_image` every master with the returned `crop` amounts.
 3. `run_bxt` with `correct_only: true` on each master.
-4. `run_plate_solve` each master with the scale from `reference/rig.md` (pick the profile from `FOCALLEN`) and the target's catalogue position (state it, the user confirms). `verify_astrometry`. **Gate G3**.
+4. `run_plate_solve` each master with the focal length and pixel size from `output/rig.json` (or `reference/rig.md`, profile from `FOCALLEN`) and the target's catalogue position (state it, the user confirms). `verify_astrometry`. **Gate G3**.
 5. `export_image` each master to `agentic/work/<Target>_s06_<view>.xisf`.
 
 ## Stage 7 — Gradient
@@ -105,4 +107,4 @@ Narrowband: build the palettes the user wants (HOO, SHO, Foraxx-style) from `ref
 
 ## Stage 12 — Log and push
 
-Write `<workspace>/output/PROCESSING.md` from `reference/processing-log.md`, including the call log. Copy it, the JPEG and the session file into `<workspace>/output/push/`, then, after approval, `nebulis.py push <OBJECT> --bundle <workspace>/output/push --name <Target>_<YYYY-MM-DD>_processing.zip --title "<palette> final"` (admin key). Close every view this session created (never save views opened from files), leave only the final image open.
+Write `<workspace>/output/PROCESSING.md` from `reference/processing-log.md`, including the call log. Then follow `astro-project` § 4: `report.json` and the session report, the documentation page, the process icons (`.xpsm`), `project.json` again, and `astrobin.json` only if the user wants it. Copy PROCESSING.md, the JPEG, the session file, `rig.json`, `project.json`, `doc/` and the `.xpsm` into `<workspace>/output/push/`, then, after approval, `nebulis.py push <OBJECT> --bundle <workspace>/output/push --name <Target>_<YYYY-MM-DD>_processing.zip --title "<palette> final"` (admin key). Close every view this session created (never save views opened from files), leave only the final image open.

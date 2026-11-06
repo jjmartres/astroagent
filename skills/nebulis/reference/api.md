@@ -1,6 +1,6 @@
 # Nebulis HTTP API (the parts this skill uses)
 
-Source: nebulis-app/nebulis, `server/routes/library.ts`, `server/routes/meta.ts`, `server/middleware/auth.ts`, `server/middleware/apiEnvelope.ts`, and the contract test `tests/backend/pixinsightContract.test.ts`. Base path `/api/v1`.
+Source: nebulis-app/nebulis, `server/routes/library.ts`, `server/routes/meta.ts`, `server/routes/openapi.ts`, `server/lib/telescopeSchemas.ts`, `server/lib/observingSiteSchemas.ts`, `server/middleware/auth.ts`, `server/middleware/apiEnvelope.ts`, and the contract test `tests/backend/pixinsightContract.test.ts`. Base path `/api/v1`.
 
 ## Authentication and envelope
 
@@ -12,7 +12,7 @@ Source: nebulis-app/nebulis, `server/routes/library.ts`, `server/routes/meta.ts`
 | Method | Path | Body / query | Returns |
 |---|---|---|---|
 | GET | `/meta/version` | | `{ version }` |
-| GET | `/library/objects` | | `[{ id, name, folderName, sessionCount? }]` |
+| GET | `/library/objects` | `?search=` optional | `[{ id, catalogId, name, folderName, type, constellation, ra, dec, magnitude, distanceLy, sizeArcmin, description, aliases[], nicknames[], primaryTelescopeId, sessionCount, … }]` |
 | GET | `/library/objects/:id/sessions` | `?includeVariants=true` optional | `[{ date, filters[], exposures[], subFrameCount, … }]` |
 | GET | `/library/objects/:id/sessions/:date/frame-analysis` | `?includeVariants=1` optional | `{ objectId, date, frames[], reference, measured, total }`; each frame `{ path, name, timestamp, metrics, verdict: { score, grade, flags[], reasons[] }, review, kept }` |
 | POST | `/library/frame-analysis/measure` (admin) | `{ path, force? }` | `{ path, metrics, cached }`; measures one frame, CPU-heavy |
@@ -23,6 +23,8 @@ Source: nebulis-app/nebulis, `server/routes/library.ts`, `server/routes/meta.ts`
 | GET | `/library/download/tmp/:token` | no auth: the token is the credential | the ZIP |
 | GET | `/library/calibrations` | | `{ groups[] }`: calibration library by type, with `settingsGroups[]` (`key, exposureSec, binning, gain, sensorTempC, fileCount, isExpired, attachments?`) |
 | GET | `/library/calibrations/attachments?objectId=` | `&date=` optional | `{ attachments[] }`: `{ id, objectId, date, calibrationType: flat \| flatDark, scope, folderName, settingsKey }` |
+| GET | `/telescopes` | | `[{ id, name, model, kind, activeOpticalConfigId, opticalConfigs[{ id, name, focalLengthMm, sensorWidthMm, sensorHeightMm, pixelSizeUm }], rig{ sensorType, filters[] }, usedFilters[], transports[], … }]`; `nebulis.py` drops transports and credentials |
+| GET | `/sites/active` | | `{ id, name, latitude, longitude, timezone, bortleClass, darkness, … }` |
 | GET | `/library/objects/:id/project-archives` | | `[{ id, originalName, size, uploadedAt, title, … }]` |
 | POST | `/library/objects/:id/project-archives` (admin) | multipart: `archive` (.zip, .xpsm, .pxiproject), `title`, `notes`, `software` | the stored record |
 

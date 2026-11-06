@@ -11,11 +11,12 @@
 
 Agent skills to process astrophotography campaigns shot with my setup (Askar 91F, ZWO ASI585MC Air, Askar D1/D2 dual-band filters) from the **Nebulis** library to a finished image in **PixInsight**, with an AI agent (Claude Code or OpenCode) that proposes every stage and waits for your approval.
 
-Nothing here modifies PixInsight or the connector: PixInsight is operated through [pixinsight-connector](https://github.com/mxcoppell/pixinsight-connector), used as published on npm. This repository holds only knowledge (skills), a Nebulis client script and a PJSR helper.
+Nothing here modifies PixInsight or the connector: PixInsight is operated through [pixinsight-connector](https://github.com/mxcoppell/pixinsight-connector), used as published on npm. This repository holds only knowledge (skills), two scripts (a Nebulis client, a project documentation tool) and a PJSR helper.
 
 | Skill | What it does |
 |---|---|
 | `skills/astro-processing` | The workflow: sub review, calibration plan, WBPP stacking, D1/D2 channel extraction and HOO/SHO palettes (or the broadband path), starless stretch with three candidates, finishing, export, `PROCESSING.md`, push back to Nebulis. Rig facts, calibration rules and quality gates are in its `reference/` folder. |
+| `skills/astro-project` | Describes and documents each processed campaign: `rig.json` (target, site, optics, camera, filters, per-night sequences) read from the Nebulis export and the FITS headers, the PixInsight project description, a documentation page, a session report of every stage, process icons with the parameters actually applied, and AstroBin form fields on request. Script: `scripts/astro_project.py`. |
 | `skills/nebulis` | A command-line client (`scripts/nebulis.py`) for the Nebulis API: objects, nights, Frame Analysis and keep/reject review, stacking plan, WBPP-ready export download, upload of results. Usable on its own. |
 
 ## How a session runs
@@ -84,7 +85,7 @@ git clone https://github.com/jjmartres/astroagent ~/Repositories/astroagent
 ~/Repositories/astroagent/install.sh
 ```
 
-`install.sh` links both skills into `~/.claude/skills/`, which Claude Code and OpenCode both read. `git pull` updates them.
+`install.sh` links the three skills into `~/.claude/skills/`, which Claude Code and OpenCode both read. `git pull` updates them.
 
 Any Agent Skills harness: `npx skills add jjmartres/astroagent`.
 
@@ -146,7 +147,15 @@ agentic/                       connector scratch, previews, session file, call l
 output/wbpp/                   WBPP output and masters
 output/final/                  XISF, TIFF, JPEG
 output/PROCESSING.md           the processing log
+output/rig.json                target, site, optics, camera, filters, sequences (schema-validated)
+output/project.json            PixInsight project description (Description field)
+output/doc/index.html          documentation page (Documentation field)
+output/doc/session-report.html every stage: measured, proposed, decided, gates
+output/Process Icons - <name> - <palette> workflow.xpsm
+output/astrobin.json           AstroBin form fields, when you ask for them
 ```
+
+`rig.json` is built from the export's `manifest.json`, the FITS headers of the lights and your Nebulis telescope profile and observing site; the agent asks you only for what none of them holds (aperture, a description per filter...). The pages use the astroagent colours with a light/dark switch and work offline, in a browser or in PixInsight. The process icons come from the connector's call log, serialized by PixInsight itself.
 
 ## Use
 
@@ -200,6 +209,12 @@ Open Claude Code or OpenCode in a terminal and ask in plain words. The agent loa
   ~/Astro/Processing/Sh2-105/data --allow-warnings)
   ⎿  unpacked to ~/Astro/Processing/Sh2-105/data/Sh2-105_9-nights_wbpp
      lights 958 (plan 958) · layout wbpp
+⏺ Bash(python3 ~/.claude/skills/astro-project/scripts/astro_project.py scan ~/Astro/Processing/Sh2-105
+  --object … --telescope … --site …)
+  ⎿  export Sh2-105_9-nights_wbpp · 958 light headers read · 9 night/filter groups · 958 subs kept · 47.9 h
+       D1   768 × 180 s  gain 200  bin 1  7 night(s)  38.4 h
+       D2   190 × 180 s  gain 200  bin 1  2 night(s)  9.5 h
+     rig.json OK
 ⏺ pixinsight - run_wbpp (MCP)(input_dirs: ["…/data/Sh2-105_9-nights_wbpp"], output_dir: "wbpp",
   keywords: [{name: "NIGHT", mode: "pre"}], rejection: "Auto", local_normalization: true)
   ⎿  WBPP started headless · run id 20261106-153204
@@ -222,8 +237,18 @@ Open Claude Code or OpenCode in a terminal and ask in plain words. The agent loa
 ⏺ pixinsight - export_image (MCP)(view_id: "Sh2_105_Foraxx", file_path:
   "final/Sh2-105_Foraxx_2026-11-06.xisf")
   ⎿  Wrote output/final/Sh2-105_Foraxx_2026-11-06.xisf (32-bit)
+⏺ Bash(python3 ~/.claude/skills/astro-project/scripts/astro_project.py report ~/Astro/Processing/Sh2-105
+  && python3 ~/.claude/skills/astro-project/scripts/astro_project.py doc ~/Astro/Processing/Sh2-105)
+  ⎿  session report: output/doc/session-report.html
+     doc: output/doc/index.html
+⏺ pixinsight - run_pjsr (MCP)(code: <agentic/work/icons.js>)
+  ⎿  14 process instances serialized
+⏺ Bash(python3 ~/.claude/skills/astro-project/scripts/astro_project.py xpsm ~/Astro/Processing/Sh2-105
+  --pjsr-result agentic/work/icons-result.json)
+  ⎿  Process Icons - Crescent Nebula - Foraxx workflow.xpsm: 14 icon(s)
 ⏺ Foraxx kept. Exported final/Sh2-105_Foraxx_2026-11-06 as .xisf, .tif and .jpg, and wrote
-  PROCESSING.md. Store them with Sh2-105 in Nebulis?
+  PROCESSING.md, the documentation page, the session report and 14 process icons. Store them
+  with Sh2-105 in Nebulis?
 
 > yes
 
@@ -242,6 +267,7 @@ Good to know:
 
 - **Pick up later.** Say *"continue Sh2-105"*: the agent reads its session file and resumes at the first stage not done.
 - **Let a stage run alone.** Say *"run stacking without asking"*: that stage no longer waits, for this session only.
+- **Document a target.** *"Document Sh2-105"* or *"make the process icons for this session"* uses the `astro-project` skill on an existing workspace.
 - **Nebulis on its own.** *"Which subs were bad last night on NGC 6888?"* or *"fetch Sh2-112 for stacking"* use only the `nebulis` skill.
 - **Change a value.** Answer a proposal with another value (*"denoise 0.4"*); the agent keeps it for the rest of the session and logs it.
 
@@ -255,11 +281,11 @@ The logo, its variants and icons are in `brand/` (usage in `brand/BRAND.md`). Th
 python3 -m unittest discover -s tests
 ```
 
-The tests run `nebulis.py` against a local mock of the Nebulis API. The PixInsight side cannot run in CI; `skills/astro-processing/scripts/pjsr/astro-helpers.js` is checked by hand on real data.
+The tests run `nebulis.py` against a local mock of the Nebulis API, and `astro_project.py` on a synthetic workspace (a Nebulis export with FITS headers, a connector call log). The PixInsight side cannot run in CI; `skills/astro-processing/scripts/pjsr/astro-helpers.js` is checked by hand on real data.
 
 ## Status
 
-Version 0.1.0, not yet run end to end on real data. See `CHANGELOG.md`. Every processing value in the skills is a starting point; tune it on your data and commit the values that work.
+Version 0.2.0, not yet run end to end on real data. See `CHANGELOG.md`. Every processing value in the skills is a starting point; tune it on your data and commit the values that work.
 
 ## Credits
 

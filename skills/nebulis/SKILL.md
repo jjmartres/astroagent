@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: jjmartres
-  version: "0.1.0"
+  version: "0.2.0"
 ---
 
 # Nebulis
@@ -29,12 +29,15 @@ Some commands need an **admin** key: `review` and `push`. A 403 means the key is
 |---|---|
 | `status` | Server version and an authenticated test. Run it first in a session. |
 | `objects [--search TEXT]` | Find an object id (`id` is what every other command takes). |
+| `object OBJECT` | One object: type, constellation, catalogue position, magnitude, distance, size, names. |
 | `sessions OBJECT` | Nights with filters, exposures and sub counts. |
 | `analysis OBJECT DATE [--bad-only]` | Frame Analysis of one night: grade (good / fair / bad), flags (`clouds`, `faint`, `trails`, `soft`, `streak`, `spots`, `noStars`, `noisy`), FWHM, star count, kept or dropped, and the frame's library path. Unmeasured frames count as kept. |
 | `review --keep\|--reject\|--reset PATH...` | Record the user's call on frames (paths from `analysis`). `--reset` returns a frame to its grade. Only after the user approved the list. |
 | `plan OBJECT --dates D... \| --all` | The stacking plan: per night × filter × exposure, the lights kept and the dark, flat, flat-dark and bias Nebulis picked (`attached` or `matched`), with issues. Exit code 2 when the plan has errors. |
 | `fetch OBJECT --dates D... --dest DIR [--allow-warnings] [--force]` | Builds the export on the server (WBPP layout by default), downloads it and unpacks it under `DIR/<export folder>/`. Refuses a plan with errors; refuses warnings unless `--allow-warnings` (pass it only after the user accepted each warning). |
 | `archives OBJECT` | Project archives already stored with the object. |
+| `telescopes` | Telescope profiles: model, optical configurations (focal length, pixel size, sensor size), sensor type, filters. Connection details are never printed. |
+| `site` | The active observing site: name, coordinates, Bortle class. |
 | `push OBJECT --bundle DIR \| --file FILE` | Stores a `.zip`, `.xpsm` or `.pxiproject` with the object (`--bundle` zips a folder). Refuses to overwrite a same-named archive unless `--force`. |
 
 Exit codes: 0 ok, 1 usage or configuration, 2 plan errors (or unaccepted warnings), 3 API or network error.

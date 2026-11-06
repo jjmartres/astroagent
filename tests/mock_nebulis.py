@@ -90,7 +90,21 @@ class H(BaseHTTPRequestHandler):
         if not self.authed():
             return
         if p == "/api/v1/library/objects":
-            return self.send(200, [{"id": OBJ, "name": "Crescent Nebula", "folderName": OBJ, "sessionCount": 2}])
+            return self.send(200, [{"id": OBJ, "catalogId": OBJ, "name": "Sh2-105", "folderName": OBJ, "sessionCount": 2,
+                                    "type": "Emission nebula", "constellation": "Cygnus", "ra": "20h 12m 06s",
+                                    "dec": "+38° 21' 00\"", "magnitude": 7.4, "distanceLy": 5000, "sizeArcmin": "18 × 12",
+                                    "description": "A Wolf-Rayet shell.", "wikiUrl": None, "aliases": ["NGC 6888"],
+                                    "nicknames": ["Crescent Nebula"]}])
+        if p == "/api/v1/telescopes":
+            return self.send(200, [{"id": "t1", "name": "Elendil", "model": "Askar 91F", "password": "********",
+                                    "hostname": "nas", "transports": [{"password": "********"}],
+                                    "activeOpticalConfigId": "oc1", "usedFilters": ["D1", "D2"],
+                                    "opticalConfigs": [{"id": "oc1", "name": "native", "focalLengthMm": 609,
+                                                        "sensorWidthMm": 11.14, "sensorHeightMm": 6.26, "pixelSizeUm": 2.9}],
+                                    "rig": {"sensorType": "color", "filters": ["D1", "D2"]}}])
+        if p == "/api/v1/sites/active":
+            return self.send(200, {"id": "s1", "name": "Home", "latitude": 45.5, "longitude": 6.3, "timezone": "Europe/Paris",
+                                   "bortleClass": 4, "darkness": "rural", "minAlt": 20})
         if p == f"/api/v1/library/objects/{OBJ}/sessions":
             return self.send(200, [{"date": "2026-09-06", "filters": ["D2"], "exposures": [180], "subFrameCount": 2},
                                    {"date": "2026-09-05", "filters": ["D1"], "exposures": [180], "subFrameCount": 3}])

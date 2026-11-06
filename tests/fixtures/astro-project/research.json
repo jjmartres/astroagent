@@ -1,0 +1,49 @@
+{
+  "common_name": "Crescent Nebula",
+  "catalog_ids": [
+    "NGC 6888",
+    "Sh2-105",
+    "LBN 203",
+    "Caldwell 27"
+  ],
+  "object_type": "Emission nebula (Wolf-Rayet wind-blown shell)",
+  "constellation": "Cygnus",
+  "distance_ly": 5000,
+  "size_arcmin": "18 × 12",
+  "magnitude": 7.4,
+  "summary": "A shell of gas blown by the fast wind of the Wolf-Rayet star WR 136 into the material it shed as a red giant, glowing in hydrogen-alpha with a thin skin of doubly ionised oxygen.",
+  "facts": [
+    {
+      "label": "Ionising star",
+      "value": "WR 136"
+    },
+    {
+      "label": "Age",
+      "value": "about 400,000 years"
+    }
+  ],
+  "sections": [
+    {
+      "title": "What it is",
+      "paragraphs": [
+        "Example text for the test fixture: the shell formed when the star's Wolf-Rayet wind caught up with slower material."
+      ]
+    },
+    {
+      "title": "Discovery",
+      "paragraphs": [
+        "Example text: catalogued by William Herschel in 1792."
+      ]
+    }
+  ],
+  "imaging_notes": [
+    "The OIII skin is faint: D1 nights carry most of the signal.",
+    "Dense star field: StarXTerminator before stretching."
+  ],
+  "references": [
+    {
+      "title": "SIMBAD: NGC 6888",
+      "url": "https://simbad.cds.unistra.fr/simbad/sim-id?Ident=NGC+6888"
+    }
+  ]
+}

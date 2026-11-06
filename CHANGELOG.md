@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.0 (2026-11-06)
+
+- New `astro-project` skill and `scripts/astro_project.py` (standard library only):
+  - `scan` builds `output/rig.json` from the Nebulis export's `manifest.json`, the FITS headers of the lights (read without the pixels) and the Nebulis object, telescope profile and observing site; records where each value came from; asks only for what is missing; validated against `reference/rig.schema.json`.
+  - `project` writes the PixInsight project description (`project.json`), `doc` a documentation page, `report` a session report of every stage (measured, proposed, decided, parameters, gates), `astrobin` the AstroBin form fields (optional).
+  - `icons` and `xpsm` turn the processes the session actually ran, read from the pixinsight-connector call log, into a process icon set serialized by PixInsight.
+  - Pages in the astroagent colours (Night, OIII, H-alpha) with a light/dark switch, self-contained.
+- `nebulis.py`: `object`, `telescopes` (connection details stripped) and `site` commands.
+- `astro-processing`: bootstraps the project after Fetch, researches the object while WBPP runs, writes the documentation at Stage 12; rig facts come from `rig.json` when present.
+- Site redesigned: the example session replayed like a terminal recording at the top, gains, the approval loop, install with shell tabs; optional Nebulis Connector setup in PixInsight.
+
 ## 0.1.0 (2026-11-06)
 
 First version, not yet run end to end on real data.

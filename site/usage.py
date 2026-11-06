@@ -7,6 +7,7 @@ what the agent says and its thinking are translated. Numbers are illustrative bu
 """
 
 NB = "python3 ~/.claude/skills/nebulis/scripts/nebulis.py"
+AP = "python3 ~/.claude/skills/astro-project/scripts/astro_project.py"
 
 # (kind, payload). Kinds: user, think, skill, tool, say, note. Strings in {braces} are translated keys.
 SESSION = [
@@ -39,6 +40,11 @@ SESSION = [
     ("tool", (f"Bash({NB} fetch Sh2-105 --all --dest ~/Astro/Processing/Sh2-105/data --allow-warnings)", [
         "unpacked to ~/Astro/Processing/Sh2-105/data/Sh2-105_9-nights_wbpp",
         "lights 958 (plan 958) · layout wbpp"])),
+    ("tool", (f"Bash({AP} scan ~/Astro/Processing/Sh2-105 --object … --telescope … --site …)", [
+        "export Sh2-105_9-nights_wbpp · 958 light headers read · 9 night/filter groups · 958 subs kept · 47.9 h",
+        "  D1   768 × 180 s  gain 200  bin 1  7 night(s)  38.4 h",
+        "  D2   190 × 180 s  gain 200  bin 1  2 night(s)  9.5 h",
+        "rig.json OK"])),
     ("tool", ("pixinsight - run_wbpp (MCP)(input_dirs: [\"…/data/Sh2-105_9-nights_wbpp\"], output_dir: \"wbpp\", "
               "keywords: [{name: \"NIGHT\", mode: \"pre\"}], rejection: \"Auto\", local_normalization: true)", [
         "WBPP started headless · run id 20261106-153204"])),
@@ -54,6 +60,13 @@ SESSION = [
     ("user", "{u5}"),
     ("tool", ("pixinsight - export_image (MCP)(view_id: \"Sh2_105_Foraxx\", file_path: \"final/Sh2-105_Foraxx_2026-11-06.xisf\")", [
         "Wrote output/final/Sh2-105_Foraxx_2026-11-06.xisf (32-bit)"])),
+    ("tool", (f"Bash({AP} report ~/Astro/Processing/Sh2-105 && {AP} doc ~/Astro/Processing/Sh2-105)", [
+        "session report: output/doc/session-report.html",
+        "doc: output/doc/index.html"])),
+    ("tool", ("pixinsight - run_pjsr (MCP)(code: <agentic/work/icons.js>)", [
+        "14 process instances serialized"])),
+    ("tool", (f"Bash({AP} xpsm ~/Astro/Processing/Sh2-105 --pjsr-result agentic/work/icons-result.json)", [
+        "Process Icons - Crescent Nebula - Foraxx workflow.xpsm: 14 icon(s)"])),
     ("say", "{a6}"),
     ("user", "{u6}"),
     ("tool", (f"Bash({NB} push Sh2-105 --bundle output/push --name Sh2-105_2026-11-06_processing.zip)", [
@@ -80,7 +93,7 @@ USAGE = {
         "n1": "gradient · channels · deconvolution · noise reduction · one approval each",
         "a5": "Three stretch candidates side by side. s3 clips 0.14 % of pixels to white, above the 0.1 % gate: rejected. s1 or s2?",
         "u5": "s2, and show me HOO against the Foraxx palette",
-        "a6": "Foraxx kept. Exported final/Sh2-105_Foraxx_2026-11-06 as .xisf, .tif and .jpg, and wrote PROCESSING.md. Store them with Sh2-105 in Nebulis?",
+        "a6": "Foraxx kept. Exported final/Sh2-105_Foraxx_2026-11-06 as .xisf, .tif and .jpg, and wrote PROCESSING.md, the documentation page, the session report and 14 process icons. Store them with Sh2-105 in Nebulis?",
         "u6": "yes",
         "a7": "Stored in Nebulis under Project archives. The final image is open in PixInsight; every other view of this session is closed.",
         "tips_title": "Good to know",
@@ -109,7 +122,7 @@ USAGE = {
         "n1": "gradient · canaux · déconvolution · débruitage · une validation à chaque fois",
         "a5": "Trois stretchs candidats côte à côte. s3 sature 0,14 % des pixels au blanc, au-delà du seuil de 0,1 % : rejeté. s1 ou s2 ?",
         "u5": "s2, et montre-moi HOO face à la palette Foraxx",
-        "a6": "Foraxx retenue. Exporté final/Sh2-105_Foraxx_2026-11-06 en .xisf, .tif et .jpg, et rédigé PROCESSING.md. Je les range avec Sh2-105 dans Nebulis ?",
+        "a6": "Foraxx retenue. Exporté final/Sh2-105_Foraxx_2026-11-06 en .xisf, .tif et .jpg, et rédigé PROCESSING.md, la page de documentation, le rapport de session et 14 icônes de process. Je les range avec Sh2-105 dans Nebulis ?",
         "u6": "oui",
         "a7": "Rangé dans Nebulis, sous Project archives. L'image finale reste ouverte dans PixInsight ; toutes les autres vues de la session sont fermées.",
         "tips_title": "Bon à savoir",
@@ -138,7 +151,7 @@ USAGE = {
         "n1": "gradiente · canales · deconvolución · reducción de ruido · una aprobación cada vez",
         "a5": "Tres estirados candidatos lado a lado. s3 satura el 0,14 % de los píxeles en blanco, por encima del umbral del 0,1 %: descartado. ¿s1 o s2?",
         "u5": "s2, y enséñame HOO frente a la paleta Foraxx",
-        "a6": "Me quedo con Foraxx. Exportado final/Sh2-105_Foraxx_2026-11-06 en .xisf, .tif y .jpg, y redactado PROCESSING.md. ¿Los guardo con Sh2-105 en Nebulis?",
+        "a6": "Me quedo con Foraxx. Exportado final/Sh2-105_Foraxx_2026-11-06 en .xisf, .tif y .jpg, y redactados PROCESSING.md, la página de documentación, el informe de sesión y 14 iconos de proceso. ¿Los guardo con Sh2-105 en Nebulis?",
         "u6": "sí",
         "a7": "Guardado en Nebulis, en Project archives. La imagen final sigue abierta en PixInsight; el resto de vistas de la sesión están cerradas.",
         "tips_title": "Conviene saber",
@@ -167,7 +180,7 @@ USAGE = {
         "n1": "gradiente · canali · deconvoluzione · riduzione del rumore · un'approvazione ciascuno",
         "a5": "Tre stretch candidati affiancati. s3 satura di bianco lo 0,14 % dei pixel, oltre la soglia dello 0,1 %: scartato. s1 o s2?",
         "u5": "s2, e mostrami HOO a confronto con la palette Foraxx",
-        "a6": "Tengo Foraxx. Esportato final/Sh2-105_Foraxx_2026-11-06 in .xisf, .tif e .jpg, e scritto PROCESSING.md. Li salvo con Sh2-105 in Nebulis?",
+        "a6": "Tengo Foraxx. Esportato final/Sh2-105_Foraxx_2026-11-06 in .xisf, .tif e .jpg, e scritti PROCESSING.md, la pagina di documentazione, il report di sessione e 14 icone di processo. Li salvo con Sh2-105 in Nebulis?",
         "u6": "sì",
         "a7": "Salvato in Nebulis, in Project archives. L'immagine finale resta aperta in PixInsight; tutte le altre viste della sessione sono chiuse.",
         "tips_title": "Da sapere",
