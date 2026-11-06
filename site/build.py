@@ -269,10 +269,12 @@ def page(lang):
     <h2>{esc(u["title"])}</h2>
     <p class="sub">{esc(u["lead"])}</p>
     <div class="use-grid">
-      <figure class="cc" aria-label="{esc(u["caption"])}">
-        <div class="cc-bar"><i></i><i></i><i></i><span>~/Astro/Processing · claude</span></div>
-        <div class="cc-body">{chat}
-          <div class="cc-input"><span class="p">&gt;</span><span class="cursor"></span></div>
+      <figure class="cc" aria-label="{esc(u["caption"])}" data-thinking="{esc(u["thinking"])}" data-running="{esc(u["running"])}">
+        <div class="cc-bar"><i></i><i></i><i></i><span>~/Astro/Processing · claude</span>
+          <span class="cc-ctl"><button type="button" class="cc-replay">↻ {esc(u["replay"])}</button><button type="button" class="cc-skip">⏭ {esc(u["skip"])}</button></span></div>
+        <div class="cc-body"><div class="cc-log">{chat}</div>
+          <div class="cc-status" aria-hidden="true"><span class="star">✻</span> <span class="lbl"></span> <span class="sec"></span></div>
+          <div class="cc-input"><span class="p">&gt;</span><span class="typed"></span><span class="cursor"></span></div>
           <div class="cc-hint"><span>? for shortcuts</span><span>astro-processing · nebulis</span></div>
         </div>
         <figcaption>{esc(u["caption"])}</figcaption>
