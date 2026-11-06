@@ -5,7 +5,6 @@ Run from the repository root: python3 site/build.py
 """
 import html
 import json
-import math
 import re
 import shutil
 from pathlib import Path
@@ -34,37 +33,6 @@ def symbol_inline(cls="mark"):
         fill = "var(--oiii)" if i == len(paths) - 1 else "currentColor"
         out.append(f'<path fill="{fill}"{rule} d="{d}"/>')
     return f'<svg class="{cls}" viewBox="0 0 256 256" aria-hidden="true">{"".join(out)}</svg>'
-
-
-def hero_art():
-    """A histogram of faint linear data, the midtones transfer curve that stretches it, and the star at its end."""
-    w, h, pad = 520, 360, 36
-    bars = []
-    n = 48
-    for i in range(n):
-        x = i / (n - 1)
-        v = math.exp(-((x - 0.06) ** 2) / 0.0018) + 0.18 * math.exp(-((x - 0.2) ** 2) / 0.02)
-        bh = (h - 2 * pad) * min(v, 1) * 0.92
-        bx = pad + i * (w - 2 * pad) / n
-        bars.append(f'<rect x="{bx:.1f}" y="{h - pad - bh:.1f}" width="{(w - 2 * pad) / n - 2:.1f}" height="{bh:.1f}" rx="1.5"/>')
-    m = 0.08  # midtones balance: MTF(m, x) = (m-1)x / ((2m-1)x - m)
-    pts = []
-    for i in range(0, 101):
-        x = i / 100
-        y = ((m - 1) * x) / ((2 * m - 1) * x - m)
-        pts.append(f"{pad + x * (w - 2 * pad):.1f},{h - pad - y * (h - 2 * pad):.1f}")
-    grid = "".join(
-        f'<line x1="{pad}" y1="{pad + k * (h - 2 * pad) / 4:.1f}" x2="{w - pad}" y2="{pad + k * (h - 2 * pad) / 4:.1f}"/>'
-        for k in range(5)) + "".join(
-        f'<line x1="{pad + k * (w - 2 * pad) / 4:.1f}" y1="{pad}" x2="{pad + k * (w - 2 * pad) / 4:.1f}" y2="{h - pad}"/>'
-        for k in range(5))
-    sx, sy, R, o = w - pad, pad, 22, 22 * 0.16
-    star = (f"M{sx},{sy - R} Q{sx + o},{sy - o} {sx + R},{sy} Q{sx + o},{sy + o} {sx},{sy + R} "
-            f"Q{sx - o},{sy + o} {sx - R},{sy} Q{sx - o},{sy - o} {sx},{sy - R}Z")
-    return (f'<svg class="hero-art" viewBox="-10 -10 {w + 20} {h + 20}" role="img" aria-label="Histogram and stretch curve">'
-            f'<g class="grid">{grid}</g><g class="bars">{"".join(bars)}</g>'
-            f'<polyline class="curve" points="{" ".join(pts)}"/>'
-            f'<path class="star" d="{star}"/></svg>')
 
 
 def codify(s):
@@ -104,7 +72,7 @@ def render_session(u):
 
 
 NEBULIS_URL = "https://nebulis.app/"
-SKIP = ("a", "pre", "code", "script", "style", "button", "svg", "title", "textarea")
+SKIP = ("a", "b", "pre", "code", "script", "style", "button", "svg", "title", "textarea")
 
 
 def link_nebulis(html):
@@ -124,8 +92,30 @@ def link_nebulis(html):
             elif tag in SKIP and not part.endswith("/>"):
                 depth += -1 if closing else 1
         elif depth == 0 and not in_cc and "Nebulis" in part and i > 0:
-            parts[i] = re.sub(r"\bNebulis\b", f'<a class="ext" href="{NEBULIS_URL}">Nebulis</a>', part)
+            parts[i] = re.sub(r"\bNebulis\b(?! Connector)", f'<a class="ext" href="{NEBULIS_URL}">Nebulis</a>', part)
     return head + sep + "".join(parts)
+
+
+ICONS = {  # 24 px stroke icons for the gains grid
+    "g1": '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/>',
+    "g2": '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    "g3": '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',
+    "g4": '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
+    "g5": '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    "g6": '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',
+}
+
+
+def icon(k):
+    return f'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">{ICONS[k]}</svg>'
+
+
+def pi_markup(s):
+    """Escape a setup step, set menu paths in bold and the repository URL as code."""
+    s = esc(s)
+    s = re.sub(r"(http://&lt;[^ ]+?/plugins/pixinsight/)", r"<code>\1</code>", s)
+    s = re.sub(r"((?:[A-Z][\w ]*? → )+[A-Z][\w]*(?: [A-Z][\w]*)*)", r"<b>\1</b>", s)
+    return s
 
 
 def code_block(t, text):
@@ -159,20 +149,24 @@ def page(lang):
     switch = "".join(
         f'<a href="{pre}{"" if l == "en" else l + "/"}" hreflang="{l}" lang="{l}"'
         f'{CURRENT if l == lang else ""}>{l.upper()}</a>' for l in ORDER)
-    phases = [
-        ("ph1", "ph1_sub", [1, 2, 3, 4]), ("ph2", "ph2_sub", [5, 6]),
-        ("ph3", "ph3_sub", [7, 8, 9, 10]), ("ph4", "ph4_sub", [11, 12]),
-    ]
-    flow = ""
-    for pk, ps, steps in phases:
-        items = "".join(
-            f'<li><span class="num">{n:02d}</span><div><h4>{esc(t[f"s{n}"])}</h4><p>{esc(t[f"s{n}d"])}</p></div></li>'
-            for n in steps)
-        flow += f'<section class="phase"><header><h3>{esc(t[pk])}</h3><span>{esc(t[ps])}</span></header><ol>{items}</ol></section>'
-    feats = "".join(f'<article class="feat"><h3>{esc(t[f"f{i}"])}</h3><p>{esc(t[f"f{i}d"])}</p></article>' for i in range(1, 7))
+    phases = [("ph1", [1, 2, 3, 4]), ("ph2", [5, 6]), ("ph3", [7, 8, 9, 10]), ("ph4", [11, 12])]
+    stages = "".join(
+        f'<li><h4>{esc(t[pk])}</h4><ol start="{steps[0]}">'
+        + "".join(f'<li><span class="num">{n:02d}</span>{esc(t[f"s{n}"])}</li>' for n in steps)
+        + "</ol></li>" for pk, steps in phases)
+    gains = "".join(f'<article class="gain">{icon(f"g{i}")}<h3>{esc(t[f"g{i}"])}</h3><p>{esc(t[f"g{i}d"])}</p></article>'
+                    for i in range(1, 7))
+    know = "".join(f'<li><h4>{esc(t[f"f{i}"])}</h4><p>{esc(t[f"f{i}d"])}</p></li>' for i in range(1, 4))
+    loop = "".join(f'<li><span class="step">{i}</span><h3>{esc(t[f"l{i}"])}</h3><p>{esc(t[f"l{i}d"])}</p></li>' for i in range(1, 4))
     chat = render_session(u)
     tips = "".join(f'<li><h4>{esc(h)}</h4><p>{esc(p)}</p></li>' for h, p in u["tips"])
     reqs = "".join(f"<li>{esc(r)}</li>" for r in t["rq"])
+    pi_steps = "".join(f"<li>{pi_markup(s)}</li>" for s in t["in4_steps"])
+    tabs = [("zsh / bash", INSTALL3_ENV), ("fish", INSTALL3_FISH), (t["tab_file"], INSTALL3)]
+    tabbar = "".join(f'<button type="button" role="tab" aria-selected="{"true" if k == 0 else "false"}" data-tab="{k}">{esc(n)}</button>'
+                     for k, (n, _) in enumerate(tabs))
+    panes = "".join(f'<div class="pane" role="tabpanel" data-pane="{k}"{"" if k == 0 else " data-off"}>{code_block(t, c)}</div>'
+                    for k, (_, c) in enumerate(tabs))
     return f"""<!DOCTYPE html>
 <html lang="{lang}" data-theme="dark">
 <head>
@@ -203,10 +197,9 @@ def page(lang):
   <div class="wrap bar">
     <a class="brand" href="{pre}{"" if lang == "en" else lang + "/"}">{symbol_inline()}<span>astroagent</span></a>
     <nav aria-label="Main">
-      <a href="#workflow">{esc(t["nav_workflow"])}</a>
-      <a href="#features">{esc(t["nav_features"])}</a>
+      <a href="#gains">{esc(t["nav_gains"])}</a>
+      <a href="#how">{esc(t["nav_how"])}</a>
       <a href="#install">{esc(t["nav_install"])}</a>
-      <a href="#use">{esc(u["nav"])}</a>
     </nav>
     <div class="tools">
       <div class="langs" role="group" aria-label="{esc(t["lang_switch"])}">{switch}</div>
@@ -220,80 +213,17 @@ def page(lang):
 
 <main>
 <section class="hero">
-  <div class="wrap hero-grid">
-    <div>
+  <div class="wrap">
+    <div class="hero-text">
       <p class="kicker">{esc(t["hero_kicker"])}</p>
       <h1>{esc(t["hero_h1"])}</h1>
       <p class="lead">{esc(t["hero_lead"])}</p>
       <div class="ctas">
-        <a class="btn primary" href="{REPO}">{esc(t["cta_github"])}</a>
-        <a class="btn" href="#install">{esc(t["cta_install"])}</a>
+        <a class="btn primary" href="#install">{esc(t["cta_install"])}</a>
+        <a class="btn" href="{REPO}">{esc(t["cta_github"])}</a>
       </div>
     </div>
-    <figure class="art">{hero_art()}<figcaption>{esc(t["hero_caption"])}</figcaption></figure>
-  </div>
-</section>
-
-<section id="workflow" class="block">
-  <div class="wrap">
-    <h2>{esc(t["wf_title"])}</h2>
-    <p class="sub">{esc(t["wf_lead"])}</p>
-    <div class="flow">{flow}</div>
-  </div>
-</section>
-
-<section class="block alt">
-  <div class="wrap approval">
-    <div>
-      <h2>{esc(t["ap_title"])}</h2>
-      <p class="sub">{esc(t["ap_lead"])}</p>
-      <ul class="four">
-        <li><b>{esc(t["ap_measured"])}</b></li><li><b>{esc(t["ap_proposal"])}</b></li>
-        <li><b>{esc(t["ap_why"])}</b></li><li><b>{esc(t["ap_preview"])}</b></li>
-      </ul>
-    </div>
-    <div class="term" aria-label="{esc(t["ap_example"])}">
-      <div class="term-bar"><i></i><i></i><i></i><span>{esc(t["ap_example"])}</span></div>
-      <div class="term-body">
-        <p><span class="tag">{esc(t["ap_measured"])}</span>{esc(t["ap_ex_measured"])}</p>
-        <p><span class="tag">{esc(t["ap_proposal"])}</span>{esc(t["ap_ex_proposal"])}</p>
-        <p><span class="tag">{esc(t["ap_why"])}</span>{esc(t["ap_ex_why"])}</p>
-        <div class="thumbs"><span class="t1">s1</span><span class="t2">s2</span><span class="t3">s3</span></div>
-        <p class="gate">{esc(t["ap_ex_gate"])}</p>
-        <p class="ask">&gt; {esc(t["ap_ex_ask"])}<span class="cursor"></span></p>
-      </div>
-      <p class="note">{esc(t["ap_note"])}</p>
-    </div>
-  </div>
-</section>
-
-<section id="features" class="block">
-  <div class="wrap">
-    <h2>{esc(t["ft_title"])}</h2>
-    <div class="feats">{feats}</div>
-  </div>
-</section>
-
-<section id="install" class="block alt">
-  <div class="wrap">
-    <h2>{esc(t["in_title"])}</h2>
-    <p class="sub">{esc(t["in_lead"])}</p>
-    <ol class="steps">
-      <li><h3>{esc(t["in1"])}</h3>{code_block(t, INSTALL1)}</li>
-      <li><h3>{esc(t["in2"])}</h3>{code_block(t, INSTALL2)}<p class="small">{esc(t["in_alt"])}</p>{code_block(t, INSTALL2B)}</li>
-      <li><h3>{esc(t["in3"])}</h3><p class="small">{codify(esc(t["in3_lead"]))}</p><p class="small">{codify(esc(t["in3_env"]))}</p>{code_block(t, INSTALL3_ENV)}<p class="small">{codify(esc(t["in3_fish"]))}</p>{code_block(t, INSTALL3_FISH)}<p class="small">{esc(t["in3_file"])}</p>{code_block(t, INSTALL3)}</li>
-    </ol>
-    <div class="cols">
-      <div><h3>{esc(t["rq_title"])}</h3><ul class="req">{reqs}</ul></div>
-      <div><h3>{esc(t["st_title"])}</h3><p>{esc(t["st"])}</p></div>
-    </div>
-  </div>
-</section>
-<section id="use" class="block">
-  <div class="wrap">
-    <h2>{esc(u["title"])}</h2>
-    <p class="sub">{esc(u["lead"])}</p>
-    <div class="use-grid">
+    <div class="stage">
       <figure class="cc" aria-label="{esc(u["caption"])}" data-thinking="{esc(u["thinking"])}" data-running="{esc(u["running"])}">
         <div class="cc-bar"><i></i><i></i><i></i><span>~/Astro/Processing · claude</span>
           <span class="cc-ctl"><button type="button" class="cc-replay">↻ {esc(u["replay"])}</button><button type="button" class="cc-skip">⏭ {esc(u["skip"])}</button></span></div>
@@ -302,9 +232,64 @@ def page(lang):
           <div class="cc-input"><span class="p">&gt;</span><span class="typed"></span><span class="cursor"></span></div>
           <div class="cc-hint"><span>? for shortcuts</span><span>astro-processing · nebulis</span></div>
         </div>
-        <figcaption>{esc(u["caption"])}</figcaption>
       </figure>
-      <aside class="tips"><h3>{esc(u["tips_title"])}</h3><ul>{tips}</ul></aside>
+      <p class="caption">{esc(u["caption"])}</p>
+    </div>
+  </div>
+</section>
+
+<section id="gains" class="block">
+  <div class="wrap">
+    <p class="eyebrow">{esc(t["g_eyebrow"])}</p>
+    <h2>{esc(t["g_title"])}</h2>
+    <div class="gains">{gains}</div>
+  </div>
+</section>
+
+<section id="how" class="block alt">
+  <div class="wrap">
+    <p class="eyebrow">{esc(t["how_eyebrow"])}</p>
+    <h2>{esc(t["how_title"])}</h2>
+    <p class="sub">{esc(t["how_lead"])}</p>
+    <div class="how">
+      <ol class="loop">{loop}</ol>
+      <div class="term" aria-label="{esc(t["ap_example"])}">
+        <div class="term-bar"><i></i><i></i><i></i><span>{esc(t["ap_example"])}</span></div>
+        <div class="term-body">
+          <p><span class="tag">{esc(t["ap_measured"])}</span>{esc(t["ap_ex_measured"])}</p>
+          <p><span class="tag">{esc(t["ap_proposal"])}</span>{esc(t["ap_ex_proposal"])}</p>
+          <p><span class="tag">{esc(t["ap_why"])}</span>{esc(t["ap_ex_why"])}</p>
+          <div class="thumbs"><span class="t1">s1</span><span class="t2">s2</span><span class="t3">s3</span></div>
+          <p class="gate">{esc(t["ap_ex_gate"])}</p>
+          <p class="ask">&gt; {esc(t["ap_ex_ask"])}<span class="cursor"></span></p>
+        </div>
+        <p class="note">{esc(t["ap_note"])}</p>
+      </div>
+    </div>
+    <h3 class="minor">{esc(t["stages_title"])}</h3>
+    <ol class="stages">{stages}</ol>
+    <div class="duo">
+      <div><h3 class="minor">{esc(t["talk_title"])}</h3><ul class="cards">{tips}</ul></div>
+      <div><h3 class="minor">{esc(t["know_title"])}</h3><ul class="cards">{know}</ul></div>
+    </div>
+  </div>
+</section>
+
+<section id="install" class="block">
+  <div class="wrap">
+    <p class="eyebrow">{esc(t["in_lead"])}</p>
+    <h2>{esc(t["in_title"])}</h2>
+    <ol class="steps">
+      <li><span class="step">1</span><div><h3>{esc(t["in1"])}</h3>{code_block(t, INSTALL1)}</div></li>
+      <li><span class="step">2</span><div><h3>{esc(t["in2"])}</h3>{code_block(t, INSTALL2)}<p class="small">{esc(t["in_alt"])}</p>{code_block(t, INSTALL2B)}</div></li>
+      <li><span class="step">3</span><div><h3>{esc(t["in3"])}</h3><p class="small">{codify(esc(t["in3_short"]))}</p>
+        <div class="tabs"><div class="tabbar" role="tablist">{tabbar}</div>{panes}</div></div></li>
+      <li class="opt"><span class="step">4</span><div><h3>{esc(t["in4"])}</h3><p class="small">{esc(t["in4_lead"])}</p>
+        <ol class="sub-steps">{pi_steps}</ol></div></li>
+    </ol>
+    <div class="reqs">
+      <h3 class="minor">{esc(t["rq_title"])} <span class="badge">{esc(t["ver"])} {esc(t["st"])}</span></h3>
+      <ul>{reqs}</ul>
     </div>
   </div>
 </section>

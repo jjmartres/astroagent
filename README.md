@@ -38,7 +38,7 @@ flowchart TD
 
 - macOS (tested target), PixInsight 1.9.5 or later, with BlurXTerminator, NoiseXTerminator and StarXTerminator; GHS optional.
 - Node.js 22 or later (for the connector), Python 3.9 or later (for `nebulis.py`, standard library only).
-- A Nebulis server and an API key (Settings → API keys). An **admin** key is needed to record keep/reject decisions and to upload results.
+- A Nebulis server and an API key from **Settings → Account → API keys → New key**. An **admin** key is needed to record keep/reject decisions and to upload results; a viewer key is read-only.
 - Claude Code or OpenCode.
 
 ## Install
@@ -95,7 +95,7 @@ Any Agent Skills harness: `npx skills add jjmartres/astroagent`.
 | Variable | Value |
 |---|---|
 | `ASTROAGENT_NEBULIS_URL` | Your Nebulis server, as you open it in a browser (for example `http://nas.local:3001`) |
-| `ASTROAGENT_NEBULIS_API_KEY` | A key from Nebulis, Settings → API keys (`neb-…`); an admin key to record reviews and upload results |
+| `ASTROAGENT_NEBULIS_API_KEY` | A key from Nebulis, Settings → Account → API keys → New key (`neb-…`, shown once); an admin key to record reviews and upload results |
 
 Environment variables, in zsh (`~/.zshrc`) or bash (`~/.bashrc`):
 
@@ -123,11 +123,20 @@ chmod 600 ~/.config/astroagent/env
 
 Check with `python3 ~/.claude/skills/nebulis/scripts/nebulis.py status` (with the plugin, the script is in the plugin's folder under `~/.claude/plugins/`).
 
-### 4. WBPP, once
+### 4. Optional: Nebulis inside PixInsight
+
+astroagent talks to Nebulis through its HTTP API and does not need this. The Nebulis Connector script adds Nebulis to PixInsight itself: browse your objects, download a night or matching calibration frames, store process icons and projects with the object.
+
+1. In Nebulis, **Settings → Integrations**: turn on **PixInsight integration** and copy the **PixInsight repository URL** shown under it, `http://<your-server>:<port>/plugins/pixinsight/` (keep the trailing slash).
+2. In PixInsight, **Edit → Global Preferences → Security**: tick **Allow unsigned update repositories** and **Allow execution of unsigned scripts**. If the URL starts with `http://`, also tick **Allow insecure update repositories**; PixInsight warns that downloads over HTTP cannot be authenticated, so keep it to a server on your own network.
+3. **Resources → Updates → Manage Repositories → Add**, paste the URL, **OK**. Then **Resources → Updates → Check for Updates**, apply the update and restart PixInsight.
+4. **Script → Nebulis → Nebulis Connector → Settings**: enter the server address and an API key (step 3), then test the connection.
+
+### 5. WBPP, once
 
 Open WeightedBatchPreprocessing in PixInsight and check that colour (CFA) images are debayered for your ASI585MC data; save. The connector runs WBPP headless with the parameters the skill passes, and WBPP's saved settings for the rest.
 
-### 5. Where files go
+### 6. Where files go
 
 Each object is processed in `$ASTROAGENT_ROOT/<OBJECT>/` (default `~/Astro/Processing/<OBJECT>/`):
 

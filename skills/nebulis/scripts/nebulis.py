@@ -6,7 +6,7 @@ add --json to get the raw API payload instead.
 
 Configuration: environment variables, which win, or the file ~/.config/astroagent/env (KEY=VALUE lines):
   ASTROAGENT_NEBULIS_URL       Nebulis server base URL, e.g. http://nas.local:3001 (no trailing /api)
-  ASTROAGENT_NEBULIS_API_KEY   API key created in Nebulis, Settings -> API keys (starts with "neb-")
+  ASTROAGENT_NEBULIS_API_KEY   API key created in Nebulis, Settings -> Account -> API keys -> New key (starts with "neb-")
 
 The key is sent in the X-API-Key header only. It is never printed, never written to disk by this
 script, and never put on a command line.
@@ -461,7 +461,7 @@ def main(argv: list[str] | None = None) -> None:
     except ApiError as e:
         hint = ""
         if e.status == 401:
-            hint = f" (check {KEY_VAR}; keys are created in Nebulis, Settings -> API keys)"
+            hint = f" (check {KEY_VAR}; keys are created in Nebulis, Settings -> Account -> API keys -> New key)"
         elif e.status == 403:
             hint = " (this action needs an admin key)"
         elif e.status == 404 and e.code in ("NOT_FOUND", "HTTP_ERROR"):

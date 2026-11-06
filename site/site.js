@@ -116,3 +116,15 @@
     io.observe(cc);
   } else play();
 })();
+
+/* install: shell tabs (without JavaScript every option stays visible) */
+document.querySelectorAll('.tabs').forEach(function (box) {
+  box.classList.add('js');
+  var btns = box.querySelectorAll('[role="tab"]'), panes = box.querySelectorAll('.pane');
+  btns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      btns.forEach(function (x) { x.setAttribute('aria-selected', x === b ? 'true' : 'false'); });
+      panes.forEach(function (p) { if (p.dataset.pane === b.dataset.tab) p.removeAttribute('data-off'); else p.setAttribute('data-off', ''); });
+    });
+  });
+});
