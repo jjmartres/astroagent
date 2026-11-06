@@ -286,7 +286,7 @@ def page(lang):
 <footer class="foot">
   <div class="wrap">
     <a class="brand" href="{REPO}">{symbol_inline()}<span>astroagent</span></a>
-    <p>{esc(t["ft_credits"])}</p>
+    <p>{esc(t["ft_credits"])} {esc(t["ft_scope"])}</p>
   </div>
 </footer>
 <script src="{pre}site.js"></script>

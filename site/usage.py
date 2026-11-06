@@ -64,7 +64,7 @@ SESSION = [
 USAGE = {
     "en": {
         "nav": "Use", "title": "Using it",
-        "lead": "Open Claude Code or OpenCode in a terminal and ask in plain words. The agent loads the skill, then walks you through the stages, calling Nebulis and PixInsight as it goes. An example session:",
+        "lead": "Open your coding agent in a terminal and ask in plain words. The agent loads the skill, then walks you through the stages, calling Nebulis and PixInsight as it goes. An example session:",
         "caption": "Example session, shortened. Numbers are illustrative.",
         "u1": "Process Sh2-105 with astro-processing.",
         "t1": "The user wants a full processing run. Stage 0: check Nebulis, then list the nights and pick the path from the filters.",
@@ -92,7 +92,7 @@ USAGE = {
     },
     "fr": {
         "nav": "Utiliser", "title": "Utilisation",
-        "lead": "Ouvrez Claude Code ou OpenCode dans un terminal et demandez en langage courant. L'agent charge le skill, puis vous fait passer les étapes une à une en appelant Nebulis et PixInsight. Une session type :",
+        "lead": "Ouvrez votre agent de code dans un terminal et demandez en langage courant. L'agent charge le skill, puis vous fait passer les étapes une à une en appelant Nebulis et PixInsight. Une session type :",
         "caption": "Session d'exemple, raccourcie. Les chiffres sont illustratifs.",
         "u1": "Traite Sh2-105 avec astro-processing.",
         "t1": "L'utilisateur veut un traitement complet. Étape 0 : vérifier Nebulis, puis lister les nuits et choisir le chemin d'après les filtres.",
@@ -120,7 +120,7 @@ USAGE = {
     },
     "es": {
         "nav": "Uso", "title": "Cómo se usa",
-        "lead": "Abre Claude Code u OpenCode en un terminal y pide lo que quieras con tus palabras. El agente carga el skill y te guía por las etapas, llamando a Nebulis y a PixInsight sobre la marcha. Una sesión de ejemplo:",
+        "lead": "Abre tu agente de código en un terminal y pide lo que quieras con tus palabras. El agente carga el skill y te guía por las etapas, llamando a Nebulis y a PixInsight sobre la marcha. Una sesión de ejemplo:",
         "caption": "Sesión de ejemplo, abreviada. Las cifras son ilustrativas.",
         "u1": "Procesa Sh2-105 con astro-processing.",
         "t1": "El usuario quiere un procesado completo. Etapa 0: comprobar Nebulis, luego listar las noches y elegir la ruta según los filtros.",
@@ -148,7 +148,7 @@ USAGE = {
     },
     "it": {
         "nav": "Uso", "title": "Come si usa",
-        "lead": "Apri Claude Code o OpenCode in un terminale e chiedi a parole tue. L'agente carica la skill e ti accompagna fase per fase, chiamando Nebulis e PixInsight strada facendo. Una sessione di esempio:",
+        "lead": "Apri il tuo agente di coding in un terminale e chiedi a parole tue. L'agente carica la skill e ti accompagna fase per fase, chiamando Nebulis e PixInsight strada facendo. Una sessione di esempio:",
         "caption": "Sessione di esempio, abbreviata. I numeri sono illustrativi.",
         "u1": "Elabora Sh2-105 con astro-processing.",
         "t1": "L'utente vuole un'elaborazione completa. Fase 0: controllare Nebulis, poi elencare le notti e scegliere il percorso in base ai filtri.",
