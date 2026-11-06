@@ -1,3 +1,12 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="brand/astroagent-horizontal-reversed.svg">
+    <img src="brand/astroagent-horizontal.svg" alt="astroagent" width="420">
+  </picture>
+</p>
+
+<p align="center"><a href="https://jjmartres.github.io/astroagent/">Website</a> · <a href="https://jjmartres.github.io/astroagent/fr/">Français</a> · <a href="https://jjmartres.github.io/astroagent/es/">Español</a> · <a href="https://jjmartres.github.io/astroagent/it/">Italiano</a></p>
+
 # astroagent
 
 Agent skills to process astrophotography campaigns of the **Elendil** rig (Askar 91F, ZWO ASI585MC Air, Askar D1/D2 dual-band filters) from the **Nebulis** library to a finished image in **PixInsight**, with an AI agent (Claude Code or OpenCode) that proposes every stage and waits for your approval.
@@ -108,6 +117,10 @@ output/PROCESSING.md           the processing log
 ## Use
 
 In Claude Code or OpenCode: *"Process Sh2-105 with the Elendil workflow"*, *"Review last night's subs of NGC 6888 in Nebulis"*, *"Fetch Sh2-112 for stacking"*. The agent stops at every stage with numbers and a preview. To let a stage run without stopping, say so (for example *"run stacking without asking"*); it is recorded in the session file.
+
+## Brand and website
+
+The logo, its variants and icons are in `brand/` (usage in `brand/BRAND.md`). The website is generated from `site/` by `python3 site/build.py` into `_site/` and published to GitHub Pages by `.github/workflows/pages.yml`.
 
 ## Tests
 

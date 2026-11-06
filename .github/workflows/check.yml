@@ -26,6 +26,8 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: PJSR helpers parse
         run: node -e "new Function(require('fs').readFileSync('skills/elendil-processing/scripts/pjsr/elendil-helpers.js','utf8'))"
+      - name: Site builds
+        run: python site/build.py
       - name: Manifests and skill front matter
         run: |
           python - <<'PY'
