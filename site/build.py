@@ -103,6 +103,31 @@ def render_session(u):
     return "\n".join(out)
 
 
+NEBULIS_URL = "https://nebulis.app/"
+SKIP = ("a", "pre", "code", "script", "style", "button", "svg", "title", "textarea")
+
+
+def link_nebulis(html):
+    """Link every visible mention of Nebulis, except inside links, code, the terminal mock-up and the head."""
+    head, sep, body = html.partition("<body")
+    parts = re.split(r"(<[^>]+>)", body)
+    depth, in_cc = 0, False
+    for i, part in enumerate(parts):
+        if part.startswith("<"):
+            m = re.match(r"</?([a-zA-Z0-9]+)", part)
+            tag = m.group(1).lower() if m else ""
+            closing = part.startswith("</")
+            if tag == "figure" and 'class="cc"' in part:
+                in_cc = True
+            elif tag == "figure" and closing and in_cc:
+                in_cc = False
+            elif tag in SKIP and not part.endswith("/>"):
+                depth += -1 if closing else 1
+        elif depth == 0 and not in_cc and "Nebulis" in part and i > 0:
+            parts[i] = re.sub(r"\bNebulis\b", f'<a class="ext" href="{NEBULIS_URL}">Nebulis</a>', part)
+    return head + sep + "".join(parts)
+
+
 def code_block(t, text):
     return (f'<div class="code"><pre><code>{esc(text)}</code></pre>'
             f'<button type="button" class="copy" data-copied="{esc(t["copied"])}">{esc(t["copy"])}</button></div>')
@@ -321,7 +346,7 @@ def main():
     for lang in ORDER:
         d = OUT if lang == "en" else OUT / lang
         d.mkdir(exist_ok=True)
-        (d / "index.html").write_text(page(lang), encoding="utf-8")
+        (d / "index.html").write_text(link_nebulis(page(lang)), encoding="utf-8")
     (OUT / ".nojekyll").write_text("")
     print("built", sorted(str(p.relative_to(OUT)) for p in OUT.rglob("index.html")))
 
