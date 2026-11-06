@@ -75,7 +75,7 @@ claude plugin marketplace add https://github.com/jjmartres/astroagent.git#latest
 claude plugin install astroagent@astroagent
 ```
 
-`#latest` follows the newest [release](https://github.com/jjmartres/astroagent/releases/latest); leave it out to follow `main`. `claude plugin marketplace update astroagent` fetches a newer release.
+`#latest` follows the newest [release](https://github.com/jjmartres/astroagent/releases/latest); leave it out to follow `main`. `claude plugin marketplace update astroagent` fetches a newer release. Added earlier without `#latest`? Claude Code refuses to change the source of a known marketplace: run `claude plugin marketplace remove astroagent` first, then the two commands above.
 
 The plugin does not register the `pixinsight` MCP server: use the one from step 1 (or from the
 pixinsight-connector-skills plugin), never two, since two connectors compete for PixInsight's script slot.
