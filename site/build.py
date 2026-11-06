@@ -66,6 +66,10 @@ def hero_art():
             f'<path class="star" d="{star}"/></svg>')
 
 
+def codify(s):
+    return re.sub(r"(ASTROAGENT_[A-Z_]+|~/[\w./-]+)", r"<code>\1</code>", s)
+
+
 def code_block(t, text):
     return (f'<div class="code"><pre><code>{esc(text)}</code></pre>'
             f'<button type="button" class="copy" data-copied="{esc(t["copied"])}">{esc(t["copy"])}</button></div>')
@@ -78,6 +82,8 @@ INSTALL2 = """claude plugin marketplace add jjmartres/astroagent
 claude plugin install astroagent@astroagent"""
 INSTALL2B = """git clone https://github.com/jjmartres/astroagent ~/Repositories/astroagent
 ~/Repositories/astroagent/install.sh"""
+INSTALL3_ENV = """set -gx ASTROAGENT_NEBULIS_URL http://your-server:3001
+set -gx ASTROAGENT_NEBULIS_API_KEY neb-..."""
 INSTALL3 = """mkdir -p ~/.config/astroagent
 printf '%s\\n' 'ASTROAGENT_NEBULIS_URL=http://your-server:3001' 'ASTROAGENT_NEBULIS_API_KEY=neb-...' > ~/.config/astroagent/env
 chmod 600 ~/.config/astroagent/env"""
@@ -211,7 +217,7 @@ def page(lang):
     <ol class="steps">
       <li><h3>{esc(t["in1"])}</h3>{code_block(t, INSTALL1)}</li>
       <li><h3>{esc(t["in2"])}</h3>{code_block(t, INSTALL2)}<p class="small">{esc(t["in_alt"])}</p>{code_block(t, INSTALL2B)}</li>
-      <li><h3>{esc(t["in3"])}</h3>{code_block(t, INSTALL3)}</li>
+      <li><h3>{esc(t["in3"])}</h3><p class="small">{codify(esc(t["in3_lead"]))}</p><p class="small">{codify(esc(t["in3_env"]))}</p>{code_block(t, INSTALL3_ENV)}<p class="small">{esc(t["in3_file"])}</p>{code_block(t, INSTALL3)}</li>
     </ol>
     <div class="cols">
       <div><h3>{esc(t["rq_title"])}</h3><ul class="req">{reqs}</ul></div>
