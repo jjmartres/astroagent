@@ -9,8 +9,9 @@ jobs:
   check:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        python: ["3.9", "3.13"]
+        python: ["3.10", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -19,6 +20,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: nebulis.py keeps Python 3.9 syntax (macOS system Python)
+        run: python -c "import ast; ast.parse(open('skills/nebulis/scripts/nebulis.py').read(), feature_version=(3, 9))"
       - name: nebulis.py tests
         run: python -m unittest discover -s tests -v
       - name: PJSR helpers parse
