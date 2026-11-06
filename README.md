@@ -97,12 +97,21 @@ Any Agent Skills harness: `npx skills add jjmartres/astroagent`.
 | `ASTROAGENT_NEBULIS_URL` | Your Nebulis server, as you open it in a browser (for example `http://nas.local:3001`) |
 | `ASTROAGENT_NEBULIS_API_KEY` | A key from Nebulis, Settings → API keys (`neb-…`); an admin key to record reviews and upload results |
 
-Environment variables, for example in fish (`~/.config/fish/config.fish`):
+Environment variables, in zsh (`~/.zshrc`) or bash (`~/.bashrc`):
+
+```sh
+export ASTROAGENT_NEBULIS_URL=http://nas.local:3001
+export ASTROAGENT_NEBULIS_API_KEY=neb-...
+```
+
+In fish (`~/.config/fish/config.fish`):
 
 ```fish
 set -gx ASTROAGENT_NEBULIS_URL http://nas.local:3001
 set -gx ASTROAGENT_NEBULIS_API_KEY neb-...
 ```
+
+Open a new terminal, or `source` the file, before starting Claude Code or OpenCode, so the agent inherits the variables.
 
 Or the file, which keeps the key out of your shell configuration (works in fish, bash and zsh):
 

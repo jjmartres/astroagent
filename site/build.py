@@ -82,7 +82,9 @@ INSTALL2 = """claude plugin marketplace add jjmartres/astroagent
 claude plugin install astroagent@astroagent"""
 INSTALL2B = """git clone https://github.com/jjmartres/astroagent ~/Repositories/astroagent
 ~/Repositories/astroagent/install.sh"""
-INSTALL3_ENV = """set -gx ASTROAGENT_NEBULIS_URL http://your-server:3001
+INSTALL3_ENV = """export ASTROAGENT_NEBULIS_URL=http://your-server:3001
+export ASTROAGENT_NEBULIS_API_KEY=neb-..."""
+INSTALL3_FISH = """set -gx ASTROAGENT_NEBULIS_URL http://your-server:3001
 set -gx ASTROAGENT_NEBULIS_API_KEY neb-..."""
 INSTALL3 = """mkdir -p ~/.config/astroagent
 printf '%s\\n' 'ASTROAGENT_NEBULIS_URL=http://your-server:3001' 'ASTROAGENT_NEBULIS_API_KEY=neb-...' > ~/.config/astroagent/env
@@ -217,7 +219,7 @@ def page(lang):
     <ol class="steps">
       <li><h3>{esc(t["in1"])}</h3>{code_block(t, INSTALL1)}</li>
       <li><h3>{esc(t["in2"])}</h3>{code_block(t, INSTALL2)}<p class="small">{esc(t["in_alt"])}</p>{code_block(t, INSTALL2B)}</li>
-      <li><h3>{esc(t["in3"])}</h3><p class="small">{codify(esc(t["in3_lead"]))}</p><p class="small">{codify(esc(t["in3_env"]))}</p>{code_block(t, INSTALL3_ENV)}<p class="small">{esc(t["in3_file"])}</p>{code_block(t, INSTALL3)}</li>
+      <li><h3>{esc(t["in3"])}</h3><p class="small">{codify(esc(t["in3_lead"]))}</p><p class="small">{codify(esc(t["in3_env"]))}</p>{code_block(t, INSTALL3_ENV)}<p class="small">{codify(esc(t["in3_fish"]))}</p>{code_block(t, INSTALL3_FISH)}<p class="small">{esc(t["in3_file"])}</p>{code_block(t, INSTALL3)}</li>
     </ol>
     <div class="cols">
       <div><h3>{esc(t["rq_title"])}</h3><ul class="req">{reqs}</ul></div>
