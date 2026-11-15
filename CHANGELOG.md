@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.3.0 (2026-11-15)
+
+Fixes from the first end-to-end run on real data (NGC 891, broadband OSC, 276 × 150 s).
+
+- `nebulis`:
+  - New `image` command: adds a finished image (JPG, PNG, TIFF, XISF, FITS) to the object through `POST /library/objects/:id/processed-images`, so it shows in the object's Processed images and in the gallery. `images` lists them. `push` is for the one project archive of a run; a zipped JPEG pushed there showed as a second project.
+  - `fetch`: fetch one night per call for large exports (a 7 GB multi-night export stopped the server mid-build); dedupe the calibration frames each night repeats.
+  - `api.md` documents the processed-image endpoints.
+- `astro-processing`:
+  - New Stage 4b, subframe selection (`reference/subframe-selection.md`): SubframeSelector measurements, robust outlier flags crossed with the Nebulis `clouds` flags, and a WBPP input of symbolic links so the raw data is never touched.
+  - Stage 5: `run_wbpp` with `extra_params {autoIntegrationMode: false, rejection_4: 8}`. WBPP switched a 303-frame group to FastIntegration (no local normalization, weights or rejection), and the connector's `rejection: "Auto"` is read by WBPP 3.2 as Averaged Sigma Clipping. Read the WBPP log to confirm; clean intermediates between runs.
+  - Gate G4 no longer relies on a four-corner comparison, which missed a centre-bright, blue-edged flat residual: new PJSR helpers `radialProfile`, `bgBlocks`, `colProfile` and `correctBands` in `astro-helpers.js`; MGC scale and MARS files; background clean-up on the linear starless (GradientCorrection + ABE, column bands from the flats).
+  - Stretch: MultiscaleAdaptiveStretch candidates for a bright compact subject; Gate G7 also checks the subject's high percentiles.
+  - Finishing: background-only noise and colour-mottle treatment under an inverted mask; stars stretched with `mtf` and screen-blended (`star_protected_blend` gave hollow cores, `stretch_stars` 0.2 × 2 was too faint).
+  - Export: sRGB with the right intent; a quality-95 JPEG with an EXIF date for Nebulis and AstroBin.
+  - Ground rules: one PixInsight call at a time; numeric enumerations in PJSR; a modal PixInsight dialog blocks the connector.
+- `astro-project`:
+  - `icons` reads pixinsight-connector 2.5.2 calls, which wrap their code in a function: BXT, NXT, SXT, MGC, ABE, Curves, LHE and Crop were missed before. `--from-seq` and `--exclude-view` leave out an abandoned attempt and rejected candidates. `icons.js` writes its result file itself (run it with `run_pjsr_file`); `xpsm` reads it by default.
+  - How to `scan` merged or filtered exports; session-report previews kept inside `doc/`.
+
 ## 0.2.0 (2026-11-06)
 
 - New `astro-project` skill and `scripts/astro_project.py` (standard library only):

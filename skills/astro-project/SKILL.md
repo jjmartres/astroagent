@@ -12,7 +12,7 @@ description: >-
 license: MIT
 metadata:
   author: jjmartres
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # Astro project
@@ -32,6 +32,8 @@ Everything here is about one processing workspace, `$ASTROAGENT_ROOT/<OBJECT>` (
 | `output/astrobin.json` | Only when the user wants it |
 
 The pixinsight-connector writes only under `agentic/` and `output/`; keep every file of this skill there too. Never write under `data/`.
+
+When the data is not laid out as one export under `data/` (several per-night exports merged, frames excluded at Stage 4b), give `scan` an export that matches what was stacked: a folder in `agentic/work/` with a `manifest.json` (the per-night groups, `kept` set to the frames actually stacked, nights with nothing kept left out) and `Lights/NIGHT_<date>/FILTER_<filter>/` holding symbolic links to those lights; then `scan <WS> --export <that folder>`. Correct the telescope model and site name with `--set` when Nebulis gives a profile name (`ASIAIR`, `Backyard`).
 
 The script is `scripts/astro_project.py` next to this file (standard library only). Run it with `python3`; every command prints what it did and what is missing. `NB` below is `python3 <skills>/nebulis/scripts/nebulis.py`.
 
@@ -70,10 +72,10 @@ Called from Stage 12 of astro-processing, after `PROCESSING.md` is written.
 
 1. **report.json.** Write `output/report.json` from the session file and the call log, following `reference/report.md`: one entry per stage with its status, what was measured, the proposal, the reason, the user's decision, the parameters applied and the gates with their values. Facts only, from the session: no stage or value that did not happen.
 2. **Pages.** `astro_project.py report <WS>`, then `astro_project.py doc <WS>` (the doc page links to the session report and shows `output/final/*_web.jpg` when present). Open each in a browser or describe them; check that numbers match PROCESSING.md.
-3. **Process icons.** `astro_project.py icons <WS>` reads the pixinsight-connector call logs (`agentic/**/*.jsonl`), keeps the processing calls that succeeded and the process instances they ran, and writes `agentic/work/icons.js`. Run that code with `run_pjsr`; save the returned string to `agentic/work/icons-result.json`; then `astro_project.py xpsm <WS> --pjsr-result agentic/work/icons-result.json`. PixInsight itself serializes each instance (`toSource("XPSM 1.0")`), so parameter names and values are exactly what ran. Report the icons that could not be converted. Details and limits: `reference/process-icons.md`.
+3. **Process icons.** `astro_project.py icons <WS> [--from-seq N] [--exclude-view REGEX]` reads the pixinsight-connector call logs (`agentic/**/*.jsonl`), keeps the processing calls that succeeded and the process instances they ran, and writes `agentic/work/icons.js`. Leave out an abandoned attempt (`--from-seq`) and rejected candidates or diagnostic views (`--exclude-view`), and check the printed list against PROCESSING.md. Run `agentic/work/icons.js` with `run_pjsr_file` (it writes `agentic/work/icons-result.json` itself and returns a summary); then `astro_project.py xpsm <WS>`. PixInsight itself serializes each instance (`toSource("XPSM 1.0")`), so parameter names and values are exactly what ran. Report the icons that could not be converted. Details and limits: `reference/process-icons.md`.
 4. **project.json** again (step 3), so it carries the palette.
 5. **astrobin.json**, only if the user asked for it or says they post on AstroBin: `astro_project.py astrobin <WS>`. One acquisition row per night and filter, with the calibration frame counts; `image_file` stays empty (the user uploads). Fields: `reference/outputs.md`.
-6. Add `doc/`, `project.json`, the `.xpsm` and `rig.json` to `output/push/` before the Nebulis push.
+6. Add `doc/`, `project.json`, the `.xpsm` and `rig.json` to `output/push/` before the Nebulis push. The session report's previews must be inside `output/doc/` (copy them to `output/doc/previews/` and use `previews/<file>` in report.json), or the links break in the archive.
 
 ## Rules
 

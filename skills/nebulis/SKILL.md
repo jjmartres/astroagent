@@ -5,12 +5,12 @@ description: >-
   nights, read Frame Analysis grades of the subs and record keep/reject decisions, build the
   stacking plan (lights kept plus matched darks, flats, flat-darks, bias), download a WBPP-ready
   export, and store processing results with the object. Use for "what's in Nebulis for Sh2-105",
-  "which subs were bad last night", "fetch NGC 6888 for stacking", "push the final image to
-  Nebulis", and as the data source of the astro-processing skill.
+  "which subs were bad last night", "fetch NGC 6888 for stacking", "add the final image to
+  Nebulis", "push the project archive", and as the data source of the astro-processing skill.
 license: MIT
 metadata:
   author: jjmartres
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # Nebulis
@@ -21,7 +21,7 @@ Nebulis is the user's self-hosted library of imaging sessions and calibration fr
 
 The script reads `ASTROAGENT_NEBULIS_URL` and `ASTROAGENT_NEBULIS_API_KEY` from the environment, or from `~/.config/astroagent/env` (`KEY=value` lines, `chmod 600`); environment variables win. Never print, echo or paste the key, never put it on a command line, never write it into a file other than that one. If the configuration is missing, tell the user how to set it (see the repository README) and stop.
 
-Some commands need an **admin** key: `review` and `push`. A 403 means the key is not admin.
+Some commands need an **admin** key: `review`, `push` and `image`. A 403 means the key is not admin.
 
 ## Commands
 
@@ -34,11 +34,13 @@ Some commands need an **admin** key: `review` and `push`. A 403 means the key is
 | `analysis OBJECT DATE [--bad-only]` | Frame Analysis of one night: grade (good / fair / bad), flags (`clouds`, `faint`, `trails`, `soft`, `streak`, `spots`, `noStars`, `noisy`), FWHM, star count, kept or dropped, and the frame's library path. Unmeasured frames count as kept. |
 | `review --keep\|--reject\|--reset PATH...` | Record the user's call on frames (paths from `analysis`). `--reset` returns a frame to its grade. Only after the user approved the list. |
 | `plan OBJECT --dates D... \| --all` | The stacking plan: per night × filter × exposure, the lights kept and the dark, flat, flat-dark and bias Nebulis picked (`attached` or `matched`), with issues. Exit code 2 when the plan has errors. |
-| `fetch OBJECT --dates D... --dest DIR [--allow-warnings] [--force]` | Builds the export on the server (WBPP layout by default), downloads it and unpacks it under `DIR/<export folder>/`. Refuses a plan with errors; refuses warnings unless `--allow-warnings` (pass it only after the user accepted each warning). |
+| `fetch OBJECT --dates D... --dest DIR [--allow-warnings] [--force]` | Builds the export on the server (WBPP layout by default), downloads it and unpacks it under `DIR/<export folder>/`. Refuses a plan with errors; refuses warnings unless `--allow-warnings` (pass it only after the user accepted each warning). The server builds the ZIP in one go: above a few GB, fetch **one night per call** (`--dates 2026-10-14`, then the next); a 7 GB multi-night export once stopped the server mid-build. Each night's export repeats the shared darks, bias and flats: compare them by checksum and keep one copy. |
 | `archives OBJECT` | Project archives already stored with the object. |
 | `telescopes` | Telescope profiles: model, optical configurations (focal length, pixel size, sensor size), sensor type, filters. Connection details are never printed. |
 | `site` | The active observing site: name, coordinates, Bortle class. |
-| `push OBJECT --bundle DIR \| --file FILE` | Stores a `.zip`, `.xpsm` or `.pxiproject` with the object (`--bundle` zips a folder). Refuses to overwrite a same-named archive unless `--force`. |
+| `push OBJECT --bundle DIR \| --file FILE` | Stores a **project archive** (`.zip`, `.xpsm` or `.pxiproject`) with the object, under Projects (`--bundle` zips a folder). Refuses to overwrite a same-named archive unless `--force`. **One archive per processing run**: everything goes in it (final files, PROCESSING.md, JSON, doc, icons), not the raw data or scratch. Never zip a JPEG to push it: it would show as a second project, not as an image. |
+| `images OBJECT` | Finished images stored with the object (processed images), object-level or per session. |
+| `image OBJECT --file FILE [--title T] [--notes N] [--force]` | Adds a finished image (JPG, PNG, TIFF, XISF, FITS) to the **object** (not to a session): it shows in the object's Processed images and in the gallery, dated by its upload day. Use it for the final JPEG at Stage 12. Refuses a same-named image unless `--force`. |
 
 Exit codes: 0 ok, 1 usage or configuration, 2 plan errors (or unaccepted warnings), 3 API or network error.
 
@@ -61,6 +63,7 @@ WBPP reads IMAGETYP, FILTER and EXPTIME from the headers. With several nights, a
 
 ## Rules
 
-- Read-only by default: only `review` and `push` change anything on the server, and only after the user approved the exact list or file.
+- Read-only by default: only `review`, `push` and `image` change anything on the server, and only after the user approved the exact list or file.
+- The script cannot delete an archive or an image (no delete command, on purpose). If one went to the wrong place, tell the user to delete it in the Nebulis UI, then upload again.
 - Never delete anything in Nebulis; the script has no delete command on purpose.
 - `reference/api.md` documents the endpoints, for questions the script does not answer. Use `curl` only for read-only `GET` calls, and only when the key is in the environment (`-H "X-API-Key: $ASTROAGENT_NEBULIS_API_KEY"`), never typed; otherwise use the script.

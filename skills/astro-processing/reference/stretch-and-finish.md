@@ -18,6 +18,8 @@ Clone the starless image(s) three times (`_s1`, `_s2`, `_s3`) and stretch each c
 
 Use `black_point_sigma` 2.8 and `linked: true` for RGB. Narrowband: stretching each channel to the same median balances Ha and OIII before the palette. For broadband, show s1-s3 directly; for narrowband, build the chosen palette (HOO by default) from each candidate set so the user compares colour images.
 
+**Bright compact subject (galaxy core, planetary nebula), broadband:** `robust_median_stretch` alone lifts the background to its target median and pushes the core close to 1 (it passes the clip test and still looks flat and milky). Use `MultiscaleAdaptiveStretch` instead, through `run_pjsr` (`describe_process MultiscaleAdaptiveStretch` for the names): `targetBackground` 0.10, `dynamicRangeCompression` 0.40 / 0.25 as two candidates, `contrastRecovery` true, `contrastRecoveryIntensity` 1.0, `saturationEnabled` true, `saturationAmount` 0.75, `saturationBoost` 0.5, `saturationLightnessMask` true; and as a third candidate `robust_median_stretch` with `target_median` 0.10 and `highlight_knee` 0.40–0.60 / `highlight_midtones` 0.75–0.85. Compare the subject percentiles (Gate G7) and 1:1 crops.
+
 GHS instead: when `GeneralizedHyperbolicStretch` is installed and the user prefers it, call `describe_process` `GeneralizedHyperbolicStretch` first, then `run_process` with three settings of its stretch factor; never guess parameter names.
 
 For each candidate report per channel: median, MAD, `clampFractions` (from `get_image_stats`). Gate G7. Show the three previews at the same size. Apply the chosen one; close the others.
@@ -28,6 +30,7 @@ Before each change: `clone_image` checkpoint. After: before/after preview, Gate 
 
 | Order | Change | Tool and starting values |
 |---|---|---|
+| 0 | Background noise and colour mottling (optional) | Under the luminance mask **inverted** (the subject protected): NoiseXTerminator through `run_pjsr` with `enable_frequency_separation` true, `frequency_scale` 5, low-frequency 0.70, high-frequency 0.20, `enable_color_separation` true, colour low-frequency 0.90, 1 iteration; then, for colour blotches of 50–300 px, blur only the chrominance (RGB − luminance, Gaussian σ ≈ 25 px) and recombine with the luminance, blended outside the mask. A plain second NXT at 0.35 on the stretched starless smears the faint halo into a blotchy texture |
 | 1 | Green cast (SHO, HOO) | `run_scnr` `amount` 0.6 (SHO up to 1.0), `protection: "AverageNeutral"`; state the amount used |
 | 2 | Saturation, background protected | luminance mask, `run_curves` `channel: "S"`, `points: [[0,0],[0.5,0.58],[1,1]]` |
 | 3 | Contrast | luminance mask, `run_curves` `channel: "L"` gentle S-curve `[[0,0],[0.25,0.22],[0.75,0.80],[1,1]]` |
@@ -36,9 +39,9 @@ Before each change: `clone_image` checkpoint. After: before/after preview, Gate 
 
 ## 4. Stars back
 
-1. `stretch_stars` on `Stars`: `midtone` 0.2, `iterations` 2 (more iterations = brighter, larger stars).
-2. `star_protected_blend` into the finished starless image: `strength` 1.0, `core_threshold_low` 0.6, `core_threshold_high` 0.9, `min_strength_fraction` 0.3, `max_value` 0.98.
-3. Star reduction (optional): redo step 2 from the checkpoint with `strength` 0.6-0.8; show both crops.
+1. Stretch the linear `Stars` view with PixelMath `mtf(m, $T)` (`run_pjsr`, `createNewImage` false, `truncate` true), two candidates such as m = 0.0015 and 0.0005: read the star percentiles first (p99 of a linear star image is around 1e-3). `stretch_stars` with `midtone` 0.2 and 2 iterations leaves most stars invisible on a rich field.
+2. Screen blend into the finished starless image: PixelMath `~((~$T)*(~Stars))` on the starless view. `star_protected_blend` gave hollow, ring-shaped cores on saturated stars (its colour-preserving branch takes the colour of the dark background under the core): use it only if the user wants it, and check the brightest star at 1:1.
+3. Star reduction (optional): a third, gentler stretch of the stars (larger m), or a star reduction script; show both crops.
 
 Narrowband: the D1 stars are reddish (Ha) with teal (OIII) halos; if the user wants neutral stars, `run_scnr` or a saturation curve on `Stars` before blending, on request only.
 

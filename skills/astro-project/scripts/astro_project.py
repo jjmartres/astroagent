@@ -24,9 +24,11 @@ Commands:
   doc WS                          write output/doc/index.html
   report WS                       write output/doc/session-report.html (needs report.json)
   astrobin WS                     write output/astrobin.json
-  icons WS [--log FILE ...]       read the pixinsight-connector call logs and write agentic/work/icons.json and
-                                  agentic/work/icons.js, the PJSR to run with run_pjsr
-  xpsm WS --pjsr-result FILE      wrap what icons.js returned into the .xpsm file
+  icons WS [--log FILE ...] [--from-seq N] [--exclude-view REGEX]
+                                  read the pixinsight-connector call logs and write agentic/work/icons.json and
+                                  agentic/work/icons.js, the PJSR to run with run_pjsr_file; --from-seq skips an
+                                  earlier attempt, --exclude-view drops rejected candidates and diagnostic views
+  xpsm WS [--pjsr-result FILE]    wrap what icons.js wrote (agentic/work/icons-result.json) into the .xpsm file
 
 Exit codes: 0 ok, 1 usage error, 2 incomplete or invalid data.
 """
@@ -45,7 +47,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SKILL = HERE.parent
 SCHEMA = SKILL / "reference" / "rig.schema.json"
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 FITS_EXT = (".fit", ".fits", ".fts")
 
 
@@ -711,7 +713,10 @@ LITERAL = re.compile(r"""^(?:-?\d+(?:\.\d+)?(?:e-?\d+)?|true|false|null|"(?:[^"\
 
 
 def split_statements(code: str) -> list[str]:
-    """Split PJSR into top-level statements on ; outside strings, brackets and parentheses."""
+    """Split PJSR into statements on ; and newlines outside strings, brackets and parentheses.
+
+    Braces are not counted: pixinsight-connector wraps every call in `(function(){ try { ... } })()`,
+    so counting them would leave the whole call as one statement and hide every process instance."""
     out, buf, depth, quote, i = [], [], 0, None, 0
     while i < len(code):
         ch = code[i]
@@ -723,9 +728,9 @@ def split_statements(code: str) -> list[str]:
                 quote = None
         elif ch in "\"'`":
             quote = ch
-        elif ch in "([{":
+        elif ch in "([":
             depth += 1
-        elif ch in ")]}":
+        elif ch in ")]":
             depth -= 1
         elif ch in ";\n" and depth <= 0:
             s = "".join(buf).strip().rstrip(";").strip()
@@ -739,9 +744,22 @@ def split_statements(code: str) -> list[str]:
     return out
 
 
+IIFE_HEAD = re.compile(r"^\s*\(\s*function\s*\(\s*\)\s*\{\s*(?:try\s*\{)?")
+IIFE_TAIL = re.compile(r"\}\s*(?:catch\s*\([^)]*\)\s*\{[\s\S]*\}\s*)?\}\s*\)\s*\(\s*\)\s*;?\s*$")
+
+
+def unwrap(code: str) -> str:
+    """Drop the `(function(){ try { ... } catch (e) { ... } })()` wrapper pixinsight-connector puts around a call."""
+    if not IIFE_HEAD.match(code):
+        return code
+    body = IIFE_HEAD.sub("", code, count=1)
+    m = re.search(r"\}\s*catch\s*\(", body)
+    return body[:m.start()] if m else IIFE_TAIL.sub("", body)
+
+
 def instances_in(code: str) -> list[dict]:
     found = []
-    stmts = split_statements(code)
+    stmts = split_statements(unwrap(code))
     for idx, st in enumerate(stmts):
         m = re.match(r"^(?:var|let|const)\s+([A-Za-z_]\w*)\s*=\s*new\s+([A-Z]\w*)\s*(?:\(\s*\))?$", st)
         if not m or m.group(2) not in ICON_PROCESSES:
@@ -786,10 +804,15 @@ def cmd_icons(args) -> int:
                 text = json.dumps(res)[:4000]
                 calls[key]["ok"] = not (r.get("error") or res.get("isError") or re.search(r"FAILED|REFUSED|BLOCKED|STOPPED BY USER", text))
     icons, skipped = [], []
+    exclude_view = re.compile(args.exclude_view) if args.exclude_view else None
     for (logname, seq), c in sorted(calls.items(), key=lambda kv: (kv[1].get("ts") or "", kv[0][1] or 0)):
         if not c["ok"] or not c["tool"] or SKIP_TOOLS.match(c["tool"]):
             continue
+        if args.from_seq and (seq or 0) < args.from_seq:
+            continue
         view = c["input"].get("view_id") or c["input"].get("target") or c["input"].get("id") or ""
+        if exclude_view and view and exclude_view.search(view):
+            continue
         for code in c["codes"]:
             for inst in instances_in(code):
                 base = re.sub(r"\W+", "_", f"{inst['class']}_{view}" if view else inst["class"]).strip("_")
@@ -813,22 +836,30 @@ def cmd_icons(args) -> int:
         js += [f"  P.{k} = {v};" for k, v in ic["params"]]
         js.append(f"  out.push({{id: {json.dumps(ic['id'])}, xml: P.toSource(\"XPSM 1.0\", {json.dumps(ic['id'] + '_instance')})}});")
         js.append(f"}} catch (e) {{ out.push({{id: {json.dumps(ic['id'])}, error: String(e && e.message ? e.message : e)}}); }}")
-    js += ["return JSON.stringify(out);", "})()"]
+    # The result can be large (SpectrophotometricColorCalibration carries its filter and QE curves), so the
+    # script writes it next to icons.json and returns only a summary; run it with run_pjsr_file.
+    result_path = (ws.work / "icons-result.json").resolve()
+    js += [f"File.writeTextFile({json.dumps(str(result_path))}, JSON.stringify(out));",
+           "return JSON.stringify(out.map(function (o) { return {id: o.id, ok: !!o.xml, error: o.error || null}; }));",
+           "})()"]
     (ws.work / "icons.js").write_text("\n".join(js) + "\n", encoding="utf-8")
     print(f"{len(icons)} process instance(s) from {len(logs)} log file(s):")
     for ic in icons:
         print(f"  {ic['id']:<40} {ic['tool']}  {len(ic['params'])} parameter(s)")
     for s in skipped:
         print(f"  note: {s}")
-    print(f"next: run_pjsr with the code of {ws.work / 'icons.js'}, save its result to {ws.work / 'icons-result.json'},"
-          f" then: astro_project.py xpsm {ws.root} --pjsr-result {ws.work / 'icons-result.json'}")
+    print(f"next: run_pjsr_file {ws.work / 'icons.js'} (it writes {result_path} and returns a summary),"
+          f" then: astro_project.py xpsm {ws.root}")
     return 0
 
 
 def cmd_xpsm(args) -> int:
     ws = Workspace(args.workspace)
     icons = json.loads((ws.work / "icons.json").read_text(encoding="utf-8"))
-    raw = Path(args.pjsr_result).read_text(encoding="utf-8").strip()
+    result_file = Path(args.pjsr_result) if args.pjsr_result else ws.work / "icons-result.json"
+    if not result_file.is_file():
+        die(f"{result_file} not found; run icons.js in PixInsight first (run_pjsr_file)", 2)
+    raw = result_file.read_text(encoding="utf-8").strip()
     try:
         result = json.loads(raw)
         if isinstance(result, str):
@@ -925,7 +956,10 @@ def main(argv: list[str] | None = None) -> int:
     for name in ("project", "doc", "report", "astrobin"):
         sub.add_parser(name).add_argument("workspace")
     s = sub.add_parser("icons"); s.add_argument("workspace"); s.add_argument("--log", nargs="+")
-    s = sub.add_parser("xpsm"); s.add_argument("workspace"); s.add_argument("--pjsr-result", required=True)
+    s.add_argument("--from-seq", type=int, help="ignore calls before this connector call number (an earlier attempt)")
+    s.add_argument("--exclude-view", help="regex of view ids to leave out (rejected candidates, diagnostics)")
+    s = sub.add_parser("xpsm"); s.add_argument("workspace")
+    s.add_argument("--pjsr-result", help="default: agentic/work/icons-result.json, written by icons.js")
     args = p.parse_args(argv)
     handlers = {"scan": cmd_scan, "validate": cmd_validate, "project": cmd_project, "doc": cmd_doc, "report": cmd_report,
                 "astrobin": cmd_astrobin, "icons": cmd_icons, "xpsm": cmd_xpsm}

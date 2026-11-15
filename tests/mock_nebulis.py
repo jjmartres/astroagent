@@ -51,7 +51,7 @@ def make_zip() -> bytes:
 
 
 ZIP = make_zip()
-STATE = {"polls": 0, "reviews": [], "uploads": []}
+STATE = {"polls": 0, "reviews": [], "uploads": [], "images": []}
 
 
 class H(BaseHTTPRequestHandler):
@@ -126,6 +126,9 @@ class H(BaseHTTPRequestHandler):
                                    "size": len(ZIP), "filesTotal": 9, "filesDone": 9})
         if p == f"/api/v1/library/objects/{OBJ}/project-archives":
             return self.send(200, [{"originalName": u, "size": 1, "uploadedAt": "2026-11-06T12:00:00Z"} for u in STATE["uploads"]])
+        if p == f"/api/v1/library/objects/{OBJ}/processed-images":
+            return self.send(200, [{"originalName": u, "size": 1, "date": None, "uploadedAt": "2026-11-06T12:00:00Z"}
+                                   for u in STATE["images"]])
         return self.send(404, err=("NOT_FOUND", "no route"))
 
     def do_POST(self):
@@ -147,6 +150,15 @@ class H(BaseHTTPRequestHandler):
                 return self.send(400, err=("NO_ARCHIVE", "bad type"))
             STATE["uploads"].append(name)
             return self.send(200, {"originalName": name, "size": len(raw), "uploadedAt": "2026-11-06T12:00:00Z"})
+        if p == f"/api/v1/library/objects/{OBJ}/processed-images":
+            ctype = self.headers.get("Content-Type", "")
+            assert ctype.startswith("multipart/form-data"), ctype
+            if b'name="image"; filename="' not in raw:
+                return self.send(400, err=("NO_IMAGE", "No image file provided"))
+            name = raw.split(b'filename="')[1].split(b'"')[0].decode()
+            STATE["images"].append(name)
+            return self.send(200, {"id": "proc_1", "originalName": name, "size": len(raw), "date": None,
+                                   "uploadedAt": "2026-11-06T12:00:00Z", "source": "user"})
         return self.send(404, err=("NOT_FOUND", "no route"))
 
     def do_PUT(self):
