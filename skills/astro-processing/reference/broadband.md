@@ -16,12 +16,21 @@ Run the `pixinsight-target-intake` skill when it is installed: it resolves the Q
 
 After Stage 6 (crop, BXT correction, plate solve):
 
-1. Gradient (Stage 7): `run_spfc` with `red_filter_name`, `green_filter_name`, `blue_filter_name`, `qe_name`, then `run_mgc` (colour: no `filter`) when MARS covers the field; otherwise `run_gradient_correction`. Gate G4.
+1. Gradient (Stage 7): `run_spfc` with `red_filter_name`, `green_filter_name`, `blue_filter_name`, `qe_name`, then `run_mgc` (colour: no `filter`) when MARS covers the field; otherwise `run_gradient_correction`. Pass the MARS files that cover the field with `mars_files` (`inspect_environment` with the target's position lists them; DR1 update files can hold no R data). Keep the default gradient scale (1024) for a target smaller than about a third of the frame; a smaller scale starts modelling the subject's halo. Gate G4 with the radial profile.
 2. `run_spcc` with the same filter and QE names; `white_reference` only if the user names one (galaxies: `Average Spiral Galaxy` is a common choice, ask). SPCC includes background neutralisation: do not add another.
 3. `run_bxt` with default sharpening. Gate G5.
 4. `run_nxt` with `denoise` 0.5. Gate G6.
 
 Then stars and stretch from `stretch-and-finish.md`.
+
+## 3. Starless background, before the stretch
+
+After `run_sxt` on the linear `RGB`, measure the starless background with `bgBlocks` (64 and 256 px: a spread that stays the same at 256 px is structure, not noise) and `colProfile` (columns and rows). Work on a copy, keep what improves the numbers and leaves the subject's halo level unchanged:
+
+1. `run_gradient_correction` on the starless copy, then `run_abe` with `poly_degree` 4: without stars both model the residual background far better than on the master.
+2. Bands along columns or rows (±0.3 σ or more in `colProfile`, already in the stacked master): `correctBands(id, newId, exclude)` from `astro-helpers.js` subtracts the smoothed per-column level, subject excluded. Tell the user the master flat is the likely source (flat panel uniformity).
+
+On NGC 891 (broadband OSC, 11.5 h) this took the block spread from 1.5 σ to 0.8 σ and the column bands from ±0.3 σ to ±0.03 σ; without it the stretch showed a milky halo and cloud-like patches.
 
 ## 3. Luminance
 

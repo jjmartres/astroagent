@@ -27,7 +27,12 @@ Commands:
   site                                    the active observing site: coordinates, Bortle class
   push OBJECT (--file FILE | --bundle DIR) [--title T] [--notes N] [--software S]
                                           upload a .zip/.xpsm/.pxiproject (admin key); --bundle
-                                          zips a folder first
+                                          zips a folder first. One archive per processing run.
+  images OBJECT                           finished images stored with the object (processed images)
+  image OBJECT --file FILE [--title T] [--notes N] [--force]
+                                          add a finished image (JPG/PNG/TIFF/XISF/FITS) to the object,
+                                          not to a session (admin key); it shows in the object's
+                                          Processed images and in the gallery
 
 Exit codes: 0 ok, 1 usage or configuration error, 2 the plan has errors (plan/fetch),
 3 API or network error.
@@ -153,13 +158,13 @@ class Client:
         except urllib.error.URLError as e:
             raise ApiError(0, "NETWORK", f"download failed: {e.reason}") from None
 
-    def upload(self, path: str, file_path: Path, fields: dict[str, str]):
+    def upload(self, path: str, file_path: Path, fields: dict[str, str], field: str = "archive"):
         boundary = f"----nebulis{uuid.uuid4().hex}"
         parts: list[bytes] = []
         for k, v in fields.items():
             if v:
                 parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode())
-        head = (f'--{boundary}\r\nContent-Disposition: form-data; name="archive"; filename="{file_path.name}"\r\n'
+        head = (f'--{boundary}\r\nContent-Disposition: form-data; name="{field}"; filename="{file_path.name}"\r\n'
                 f"Content-Type: application/octet-stream\r\n\r\n").encode()
         body = b"".join(parts) + head + file_path.read_bytes() + f"\r\n--{boundary}--\r\n".encode()
         req = self._request("POST", path, body, f"multipart/form-data; boundary={boundary}")
@@ -452,7 +457,7 @@ def cmd_push(c: Client, args):
         if not fpath.is_file():
             die(f"{fpath} not found", 1)
     if fpath.suffix.lower() not in allowed:
-        die(f"Nebulis accepts only {', '.join(allowed)} project archives", 1)
+        die(f"Nebulis accepts only {', '.join(allowed)} project archives; add a finished image with the image command", 1)
     existing = c.call("GET", f"/library/objects/{q(args.object)}/project-archives") or []
     if any(a.get("originalName") == fpath.name for a in existing) and not args.force:
         die(f"{fpath.name} is already stored with {args.object}; rename it or pass --force", 1)
@@ -462,6 +467,33 @@ def cmd_push(c: Client, args):
     if cleanup:
         cleanup.cleanup()
     out(args, rec, f"stored {rec.get('originalName')} ({fmt_bytes(rec.get('size'))}) with {args.object}")
+
+
+IMAGE_TYPES = (".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".xisf", ".fits", ".fit", ".fts")
+
+
+def cmd_images(c: Client, args):
+    imgs = c.call("GET", f"/library/objects/{q(args.object)}/processed-images") or []
+    rows = [f"{(i.get('uploadedAt') or '')[:19]}  {i.get('date') or 'object-level':<12}  {fmt_bytes(i.get('size')):>9}  "
+            f"{i.get('originalName')}  {i.get('title') or ''}" for i in imgs]
+    out(args, imgs, "\n".join(rows) or "no processed images")
+
+
+def cmd_image(c: Client, args):
+    """Add a finished image to the object (its Processed images and the gallery), not to a session."""
+    fpath = Path(args.file).expanduser().resolve()
+    if not fpath.is_file():
+        die(f"{fpath} not found", 1)
+    if fpath.suffix.lower() not in IMAGE_TYPES:
+        die(f"not an image Nebulis stores as a processed image ({', '.join(IMAGE_TYPES)}); "
+            "project archives go through push", 1)
+    existing = c.call("GET", f"/library/objects/{q(args.object)}/processed-images") or []
+    if any(i.get("originalName") == fpath.name for i in existing) and not args.force:
+        die(f"{fpath.name} is already an image of {args.object}; rename it or pass --force", 1)
+    print(f"uploading {fpath.name} ({fmt_bytes(fpath.stat().st_size)})", file=sys.stderr)
+    rec = c.upload(f"/library/objects/{q(args.object)}/processed-images", fpath,
+                   {"title": args.title or "", "notes": args.notes or ""}, field="image")
+    out(args, rec, f"added image {rec.get('originalName')} ({fmt_bytes(rec.get('size'))}) to {args.object}")
 
 
 # ─── CLI ────────────────────────────────────────────────────────────────────
@@ -493,6 +525,9 @@ def main(argv: list[str] | None = None) -> None:
             s.add_argument("--allow-warnings", action="store_true")
             s.add_argument("--force", action="store_true")
     s = sub.add_parser("archives"); s.add_argument("object")
+    s = sub.add_parser("images"); s.add_argument("object")
+    s = sub.add_parser("image"); s.add_argument("object"); s.add_argument("--file", required=True)
+    s.add_argument("--title"); s.add_argument("--notes"); s.add_argument("--force", action="store_true")
     s = sub.add_parser("push"); s.add_argument("object")
     src = s.add_mutually_exclusive_group(required=True)
     src.add_argument("--file"); src.add_argument("--bundle")
@@ -505,7 +540,7 @@ def main(argv: list[str] | None = None) -> None:
     handlers = {"status": cmd_status, "objects": cmd_objects, "object": cmd_object,
                 "telescopes": cmd_telescopes, "site": cmd_site, "sessions": cmd_sessions, "analysis": cmd_analysis,
                 "review": cmd_review, "plan": cmd_plan, "fetch": cmd_fetch, "archives": cmd_archives,
-                "push": cmd_push}
+                "push": cmd_push, "images": cmd_images, "image": cmd_image}
     try:
         handlers[args.cmd](c, args)
     except ApiError as e:

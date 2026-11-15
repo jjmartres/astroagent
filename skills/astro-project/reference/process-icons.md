@@ -9,9 +9,15 @@ Goal: a `.xpsm` file whose icons are the processes this session actually ran, wi
    - only **processing** tools (measurement, preview, listing and housekeeping tools are skipped);
    - in the PJSR the connector sent, each `var X = new <Process>` of a process a person would re-run (BXT, NXT, SXT, GradientCorrection, MGC, SPCC, PixelMath, Curves, GHS, HT, LHE, HDRMT, USM, SCNR, ChannelCombination, LRGBCombination...), followed by its parameter assignments and then executed (`X.executeOn(...)`, `X.executeGlobal()` or the connector's `__run(X, ...)`).
    Assignments whose value is not a literal (a variable computed in PixInsight at run time) are dropped and listed; the icon keeps the process default for them. A PixelMath whose expression is computed is skipped entirely.
+   pixinsight-connector 2.5.2 wraps each call in `(function(){ try { ... } catch (e) { ... } })()`; the wrapper is removed before the statements are read.
    Icons are numbered in run order: `s01_BlurXTerminator_Ha`, `s02_PixelMath_HOO`...
-2. **`run_pjsr`** with the code in `agentic/work/icons.js`. It rebuilds each instance in PixInsight and asks PixInsight to serialize it (`ProcessInstance.toSource("XPSM 1.0", id)`), so names, enumerations and tables are PixInsight's own. It returns a JSON array; save it to `agentic/work/icons-result.json`.
-3. **`astro_project.py xpsm <WS> --pjsr-result agentic/work/icons-result.json`** wraps the instances into `output/Process Icons - <common name> - <palette> workflow.xpsm`, one column at `xpos` 2000, 40 px apart, workspace `Workspace01`.
+
+   The log holds **every** successful call, including an abandoned first attempt, rejected candidates and diagnostic clones. Keep only what produced the final image:
+   - `--from-seq N` ignores calls before connector call N (the `seq` of the first call of the run that was kept; the call log in PROCESSING.md has it);
+   - `--exclude-view REGEX` drops calls on views that were thrown away, e.g. `--exclude-view '^(cand_|diag_|.*_s[0-9]$|.*_h[0-9]$)'`.
+   Check the list it prints against PROCESSING.md before going on.
+2. **`run_pjsr_file`** with `agentic/work/icons.js`. It rebuilds each instance in PixInsight and asks PixInsight to serialize it (`ProcessInstance.toSource("XPSM 1.0", id)`), so names, enumerations and tables are PixInsight's own. It writes the full result to `agentic/work/icons-result.json` itself (an SPCC instance carries its filter and QE curves, too large to come back through the call) and returns one line per icon: `ok` or the error.
+3. **`astro_project.py xpsm <WS>`** (or `--pjsr-result FILE` for another file) wraps the instances into `output/Process Icons - <common name> - <palette> workflow.xpsm`, one column at `xpos` 2000, 40 px apart, workspace `Workspace01`.
 
 ## Limits
 

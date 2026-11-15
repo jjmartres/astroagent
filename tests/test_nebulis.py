@@ -135,6 +135,27 @@ class NebulisCliTest(unittest.TestCase):
             self.assertEqual(r.returncode, 1)
             self.assertIn(".zip", r.stderr)
 
+    def test_image(self):
+        with tempfile.TemporaryDirectory() as d:
+            img = Path(d) / "Sh2-105_final.jpg"
+            img.write_bytes(b"\xff\xd8\xff\xd9")
+            r = self.run_cli("image", "Sh2-105", "--file", str(img), "--title", "HOO final")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn("Sh2-105_final.jpg", mock_nebulis.STATE["images"])
+            self.assertNotIn("Sh2-105_final.jpg", mock_nebulis.STATE["uploads"])
+            r = self.run_cli("images", "Sh2-105")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn("Sh2-105_final.jpg", r.stdout)
+            r = self.run_cli("image", "Sh2-105", "--file", str(img))
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("already an image", r.stderr)
+
+    def test_image_refuses_archives(self):
+        with tempfile.NamedTemporaryFile(suffix=".zip") as f:
+            r = self.run_cli("image", "Sh2-105", "--file", f.name)
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("push", r.stderr)
+
     def test_missing_config(self):
         env = {k: v for k, v in os.environ.items() if not k.startswith("ASTROAGENT_")}
         env["HOME"] = tempfile.mkdtemp()

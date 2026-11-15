@@ -27,6 +27,8 @@ Source: nebulis-app/nebulis, `server/routes/library.ts`, `server/routes/meta.ts`
 | GET | `/sites/active` | | `{ id, name, latitude, longitude, timezone, bortleClass, darkness, … }` |
 | GET | `/library/objects/:id/project-archives` | | `[{ id, originalName, size, uploadedAt, title, … }]` |
 | POST | `/library/objects/:id/project-archives` (admin) | multipart: `archive` (.zip, .xpsm, .pxiproject), `title`, `notes`, `software` | the stored record |
+| GET | `/library/objects/:id/processed-images` | | `[{ id, objectId, date \| null, filename, originalName, title, notes, size, uploadedAt, source, url, thumbUrl, … }]`: finished images of the object, every session and object-level |
+| POST | `/library/objects/:id/processed-images` (admin) | multipart: `image` (JPG, PNG, WebP, TIFF, XISF, FITS…; up to 2 GB), `title`, `notes` | the stored record, `date: null` (object-level: shown in the object's Processed images and the gallery) |
 
 ## Plan group
 

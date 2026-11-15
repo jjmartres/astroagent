@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: jjmartres
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # Astro processing
@@ -26,6 +26,7 @@ Before the first stage, read these files next to this one, once per session:
 | `reference/calibration-rules.md` | Calibration rules of the setup and how to read the Nebulis plan against them |
 | `reference/quality-gates.md` | Every gate, its measurement and its threshold |
 | `reference/narrowband-dualband.md` | D1/D2 channel extraction, OIII combination, palette expressions |
+| `reference/subframe-selection.md` | Stage 4b: SubframeSelector measurements, robust outlier flags, WBPP input without touching the data |
 | `reference/broadband.md` | Path for unfiltered data (galaxies, reflection nebulae) |
 | `reference/stretch-and-finish.md` | Star separation, stretch bracketing, finishing, star recombination |
 | `reference/processing-log.md` | `PROCESSING.md` template and the call log |
@@ -33,7 +34,7 @@ Before the first stage, read these files next to this one, once per session:
 ## Ground rules
 
 1. **Approval at every stage.** Present: *Measured* (numbers), *Proposal* (tools and exact parameters), *Why* (one line), *Preview* (`save_preview`, 1:1 crops for detail). Then stop and wait. Run a stage without waiting only if the user said so for that stage in this session; record it in the session file.
-2. **One PixInsight call at a time.** Read every result. `FAILED`, `REFUSED`, `BLOCKED`, `View not found` or `STOPPED BY USER` needs a decision, not a blind retry. After `STOPPED BY USER`, stop; call `resume_bridge` only when the user says so. If the `pixinsight-connector-troubleshooting` skill is installed, use it for tool pitfalls.
+2. **One PixInsight call at a time**, never several in parallel: the connector runs one script at a time and parallel calls can all fail together. Read every result. `FAILED`, `REFUSED`, `BLOCKED`, `View not found` or `STOPPED BY USER` needs a decision, not a blind retry. After `STOPPED BY USER`, stop; call `resume_bridge` only when the user says so. If every call fails with "Watcher did not start", PixInsight is usually blocked by a modal dialog (for example "Unable to read the directory …"): ask the user to close it, then make one test call. In PJSR, process constants such as `SubframeSelector.prototype.MeasureSubframes` or `Convolution.prototype.Parametric` can be undefined: use the numeric value (`describe_process` lists them), and check a numeric enum against its static name (`ICCProfileTransformation.RelativeColorimetric` is 2, not 1). If the `pixinsight-connector-troubleshooting` skill is installed, use it for tool pitfalls.
 3. **Raw data is read-only.** Never write, move or delete anything under `<workspace>/data/` or a Nebulis library path. Working files go to `<workspace>/agentic/work/`, deliverables to `<workspace>/output/`. The connector already refuses other paths for its own writes; keep shell writes to the same two folders.
 4. **Checkpoint before every destructive step**: `clone_image` to `<view>_cp<stage>`; reject = `restore_from_clone`. Keep at most the last two checkpoints per view, close older ones.
 5. **Never invent a value.** Rig facts come from `<workspace>/output/rig.json` once the `astro-project` skill has built it (it is read from this data's FITS headers and wins), otherwise from `reference/rig.md`; data facts from FITS headers, `scan_workspace` or the Nebulis manifest; everything else from the user. Ask once, in one message, for what is missing.
@@ -66,25 +67,33 @@ Per night: `nebulis.py analysis <OBJECT> <DATE> --bad-only`. Report per night: m
 
 ## Stage 4 — Fetch
 
-`nebulis.py fetch <OBJECT> --dates <...> --dest <workspace>/data [--allow-warnings]` (only with the warnings acknowledged in Stage 3). Check the reported light count equals the plan. Read `<export>/manifest.json` and `README.txt`; record nights, groups and integration per filter in the session file.
+`nebulis.py fetch <OBJECT> --dates <...> --dest <workspace>/data [--allow-warnings]` (only with the warnings acknowledged in Stage 3). Above a few GB, fetch one night per call (see the `nebulis` skill). Check the reported light count equals the plan, and the free disk space: WBPP needs about 4 × the size of the lights for its intermediate files. Read `<export>/manifest.json` and `README.txt`; record nights, groups and integration per filter in the session file.
 
 Then bootstrap the project with the `astro-project` skill: § 1 builds and validates `output/rig.json` from the manifest, the FITS headers and Nebulis (ask the user, once, only for what it reports missing), § 3 writes `output/project.json`. Do § 2 (object research, `output/research.json`) while WBPP runs in Stage 5.
 
+## Stage 4b — Subframe selection
+
+Follow `reference/subframe-selection.md`: measure every light with SubframeSelector, flag outliers per metric (robust z > 3 in the bad direction), cross them with the Nebulis `clouds` flags, and propose the exclusion list. After approval, build `agentic/work/wbpp_input/` (symbolic links to the kept lights and the calibration frames) and stack from there. The raw data stays untouched.
+
 ## Stage 5 — Stack (WBPP)
 
-`run_wbpp` with `input_dirs: ["<workspace>/data/<export folder>"]`, `output_dir: "wbpp"`, `keywords: [{name: "NIGHT", mode: "pre"}]` when there are several nights (each night calibrated with its own flats, as Nebulis laid them out), `rejection: "Auto"`, `weights: "PSFSignal"`, `local_normalization: true`, `autocrop: false` (the crop is done once, identically, in Stage 6). Drizzle only if the user asks (`drizzle_scale`). Poll `wbpp_status` every few minutes; report progress, never start a second run. **Gate G2** (`reference/quality-gates.md`). If a master is mono (one channel), WBPP did not debayer: stop, ask the user to enable CFA/debayer in the WBPP dialog once (saved settings apply to automation), then re-run.
+`run_wbpp` with `input_dirs: ["<workspace>/agentic/work/wbpp_input"]` (Stage 4b; the export folder when no frame was excluded), `output_dir: "wbpp"`, `keywords: [{name: "NIGHT", mode: "pre"}]` when there are several nights **and** several flat sets (one flat set for the whole campaign needs no keyword), `weights: "PSFSignal"`, `local_normalization: true`, `autocrop: false` (the crop is done once, identically, in Stage 6), and `extra_params: {autoIntegrationMode: false, rejection_4: 8}`:
+- `autoIntegrationMode: false`: WBPP 3.x switches a light group of more than 200 frames to **FastIntegration** on its own (no local normalization, no weights, no rejection); the master is then named `…_fastIntegration.xisf`.
+- `rejection_4: 8` is ESD (Generalized Extreme Studentized Deviate), right for large groups. Do **not** pass `rejection: "Auto"`: the connector sends `rejection_4=5`, which WBPP 3.2 reads as the ImageIntegration enumeration, Averaged Sigma Clipping. Other values: 4 Winsorized Sigma, 6 Linear Fit, 9 RCR.
+
+After the run, read the WBPP log (`output/wbpp/logs/*.log`): the light integration must say `Pixel rejection ... Generalized extreme Studentized deviate`, `Weighting mode ... PSF Signal Weight` and `Output normalization ... Local`; record the total rejection percentage. A second run writes `_c_1`, `master…_(1)` copies next to the first one's files: delete the previous run's `calibrated/`, `debayered/` and masters first (they are regenerated), and once the master is accepted delete `calibrated/` and `debayered/`; keep `registered/` until the end (a re-integration needs it). Drizzle only if the user asks (`drizzle_scale`). Poll `wbpp_status` every few minutes; report progress, never start a second run. **Gate G2** (`reference/quality-gates.md`). If a master is mono (one channel), WBPP did not debayer: stop, ask the user to enable CFA/debayer in the WBPP dialog once (saved settings apply to automation), then re-run.
 
 ## Stage 6 — Masters: open, crop, correct, solve
 
-1. `open_image` each master from `<workspace>/output/wbpp/master/`; `rename_view` to `D1`, `D2` or `RGB` (broadband). `get_image_dimensions`: all masters of one target must match; if not, `align_to_reference` onto `D1` (or the deepest master).
-2. Common crop: `run_pjsr` with `include: ["<this skill's folder>/scripts/pjsr/astro-helpers.js"]` and code `JSON.stringify(commonBorders(["D1","D2"]))`. `crop_image` every master with the returned `crop` amounts.
+1. `open_image` each master from `<workspace>/output/wbpp/master/` (it opens with its rejection maps: close them, or use the low-rejection map first, see step 2); `rename_view` to `D1`, `D2` or `RGB` (broadband). `get_image_dimensions`: all masters of one target must match; if not, `align_to_reference` onto `D1` (or the deepest master).
+2. Common crop: `run_pjsr` with `include: ["<this skill's folder>/scripts/pjsr/astro-helpers.js"]` and code `JSON.stringify(commonBorders(["D1","D2"]))`. With local normalization the borders are not black, so `commonBorders` can return 0: then read the edge depth from the master's low-rejection map (`rejection_low`, the fraction of frames missing there) and crop where it falls under 2 %. `crop_image` every master with the same amounts.
 3. `run_bxt` with `correct_only: true` on each master.
 4. `run_plate_solve` each master with the focal length and pixel size from `output/rig.json` (or `reference/rig.md`, profile from `FOCALLEN`) and the target's catalogue position (state it, the user confirms). `verify_astrometry`. **Gate G3**.
 5. `export_image` each master to `agentic/work/<Target>_s06_<view>.xisf`.
 
 ## Stage 7 — Gradient
 
-Narrowband: `run_gradient_correction` on each master. Broadband: follow `reference/broadband.md` (SPFC + MGC when MARS covers the field, otherwise GradientCorrection). ABE (`run_abe`) only as a fallback the user accepts. Measure before/after with `measure_uniformity` and `get_image_stats`; preview both with the same STF. **Gate G4**. Approval.
+Narrowband: `run_gradient_correction` on each master. Broadband: follow `reference/broadband.md` (SPFC + MGC when MARS covers the field, otherwise GradientCorrection). ABE (`run_abe`) only as a fallback the user accepts. Measure before and after with the helpers in `astro-helpers.js`: `radialProfile` (a centre-bright or blue-edged pattern from flats or vignetting), `bgBlocks` (uniformity over the whole field, 64 and 256 px) and `colProfile` (vertical and horizontal bands), with the subject excluded by an ellipse; plus `get_image_stats`. `measure_uniformity` compares four corners only and is blind to a radial pattern: report it, never decide on it alone. **Gate G4**. Approval.
 
 ## Stage 8 — Linear processing
 
@@ -95,7 +104,7 @@ Show 1:1 before/after crops for deconvolution and for noise reduction. Approval 
 
 ## Stage 9 — Stars out, stretch
 
-Follow `reference/stretch-and-finish.md`: StarXTerminator on linear data, stars kept as a separate view; three stretch candidates side by side with their numbers; **Gate G7** rejects a candidate that clips. The user picks one; discard the other two.
+Follow `reference/stretch-and-finish.md`: StarXTerminator on linear data, stars kept as a separate view; then check the **starless** background again (`bgBlocks`, `colProfile`): without stars, residual gradients and flat bands are easy to model and to see, and every one of them grows with the stretch. Fix them on the linear starless (`reference/broadband.md` § 3) before stretching. Then three stretch candidates side by side with their numbers; **Gate G7** rejects a candidate that clips or flattens the subject. The user picks one; discard the other two.
 
 ## Stage 10 — Composition and finishing
 
@@ -103,8 +112,8 @@ Narrowband: build the palettes the user wants (HOO, SHO, Foraxx-style) from `ref
 
 ## Stage 11 — Export
 
-**Gate G9** first: pixel medians from `get_image_stats` must show a stretched image (a still-linear image exports black). Then `export_image` to `final/<Target>_<palette>_<YYYY-MM-DD>` as `.xisf` (32-bit), `.tif` (16-bit) and `.jpg`; for the web JPEG, `resample_image` with `mode: "scale"`, `factor` = 2048 / long side and `output_id: "<Target>_web"`, export that copy as `final/<Target>_<palette>_<YYYY-MM-DD>_web.jpg`, close it.
+**Gate G9** first: pixel medians from `get_image_stats` must show a stretched image (a still-linear image exports black). Convert to sRGB (`ICCProfileTransformation`, `targetProfile "sRGB IEC61966-2.1"`, `renderingIntent` 2 = relative colorimetric). Then `export_image` to `final/<Target>_<palette>_<YYYY-MM-DD>` as `.xisf` (32-bit), `.tif` (16-bit) and `.jpg`; for the web JPEG, `resample_image` with `mode: "scale"`, `factor` = 2048 / long side and `output_id: "<Target>_web"`, export that copy as `final/<Target>_<palette>_<YYYY-MM-DD>_web.jpg`, close it. PixInsight's JPEG is strongly compressed and carries no date: for the image that goes to Nebulis or AstroBin, make a quality-95 JPEG from the 16-bit TIFF (`sips -s format jpeg -s formatOptions 95` on macOS) and write its EXIF date with `exiftool -DateTimeOriginal=… -CreateDate=… -ImageDescription=…` (the date the user wants: processing day by default; the description holds the acquisition nights and the integration), or Nebulis shows it with no date.
 
 ## Stage 12 — Log and push
 
-Write `<workspace>/output/PROCESSING.md` from `reference/processing-log.md`, including the call log. Then follow `astro-project` § 4: `report.json` and the session report, the documentation page, the process icons (`.xpsm`), `project.json` again, and `astrobin.json` only if the user wants it. Copy PROCESSING.md, the JPEG, the session file, `rig.json`, `project.json`, `doc/` and the `.xpsm` into `<workspace>/output/push/`, then, after approval, `nebulis.py push <OBJECT> --bundle <workspace>/output/push --name <Target>_<YYYY-MM-DD>_processing.zip --title "<palette> final"` (admin key). Close every view this session created (never save views opened from files), leave only the final image open.
+Write `<workspace>/output/PROCESSING.md` from `reference/processing-log.md`, including the call log. Then follow `astro-project` § 4: `report.json` and the session report, the documentation page, the process icons (`.xpsm`), `project.json` again, and `astrobin.json` only if the user wants it. Prepare **one** project archive in `<workspace>/output/push/`: `final/` (every exported file), `PROCESSING.md`, the JSON files, `doc/`, the `.xpsm`, and the session file and call log; no raw data, no WBPP intermediates, no scratch. After approval: `nebulis.py push <OBJECT> --bundle <workspace>/output/push --name <Target>_<YYYY-MM-DD>_processing.zip --title "<palette> final"` (admin key), then add the final JPEG as the object's image with `nebulis.py image <OBJECT> --file <final jpg> --title "<palette> final"`. A JPEG never goes through `push`: it would show as a second project. Close every view this session created (never save views opened from files), leave only the final image open.

@@ -148,14 +148,17 @@ class AstroProjectTest(unittest.TestCase):
         r = self.run_cli("icons", self.ws)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         icons = json.loads((self.work / "icons.json").read_text())
-        # get_image_stats is a measuring call and the NXT call failed: only BXT and PixelMath remain
-        self.assertEqual([i["class"] for i in icons], ["BlurXTerminator", "PixelMath"])
+        # get_image_stats is a measuring call and the NXT call failed; SXT and Curves come from calls wrapped the
+        # way pixinsight-connector 2.5.2 sends them, (function(){ try { ... } })()
+        self.assertEqual([i["class"] for i in icons], ["BlurXTerminator", "PixelMath", "StarXTerminator", "CurvesTransformation"])
+        self.assertIn(("overlap", "0.5"), [tuple(p) for p in icons[2]["params"]])
         self.assertIn(("sharpen_nonstellar", "0.6"), [tuple(p) for p in icons[0]["params"]])
         js = (self.work / "icons.js").read_text()
         self.assertIn('P.toSource("XPSM 1.0"', js)
+        self.assertIn("File.writeTextFile(", js)                       # large results go to icons-result.json
         fake = [{"id": icons[0]["id"], "xml": '<instance class="BlurXTerminator" version="256" id="P_instance">\n'
-                                              '      <parameter id="sharpen_nonstellar" value="0.60"/>\n   </instance>'},
-                {"id": icons[1]["id"], "error": "toSource failed"}]
+                                              '      <parameter id="sharpen_nonstellar" value="0.60"/>\n   </instance>'}] + \
+               [{"id": ic["id"], "error": "toSource failed"} for ic in icons[1:]]
         (self.work / "res.json").write_text(json.dumps(json.dumps(fake)))  # run_pjsr returns the string
         shutil.copy(FIX / "report.json", self.ws / "output" / "report.json")
         r = self.run_cli("xpsm", self.ws, "--pjsr-result", self.work / "res.json")
@@ -165,6 +168,26 @@ class AstroProjectTest(unittest.TestCase):
         self.assertIn(f'<icon id="{icons[0]["id"]}" instance="{icons[0]["id"]}_instance"', x)
         self.assertTrue(x.rstrip().endswith("</xpsm>"))
 
+
+    def test_icons_filters(self):
+        r = self.run_cli("icons", self.ws, "--exclude-view", "^cand_")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        icons = json.loads((self.work / "icons.json").read_text())
+        self.assertNotIn("CurvesTransformation", [i["class"] for i in icons])
+        r = self.run_cli("icons", self.ws, "--from-seq", "5")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        icons = json.loads((self.work / "icons.json").read_text())
+        self.assertEqual([i["class"] for i in icons], ["StarXTerminator", "CurvesTransformation"])
+
+    def test_xpsm_default_result_file(self):
+        r = self.run_cli("icons", self.ws, "--from-seq", "5", "--exclude-view", "^cand_")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        icons = json.loads((self.work / "icons.json").read_text())
+        res = [{"id": icons[0]["id"], "xml": '<instance class="StarXTerminator" version="1" id="x">\n'
+                                             '   <parameter id="overlap" value="0.50"/>\n</instance>'}]
+        (self.work / "icons-result.json").write_text(json.dumps(res))   # what icons.js writes itself
+        r = self.run_cli("xpsm", self.ws)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
 
 if __name__ == "__main__":
     unittest.main()
