@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+From importing a Telescope.live library (calibrated lights from CHI-1, SPA-1, SPA-2 and AUS-2) into Nebulis.
+
+- `nebulis`:
+  - `objects --search` uses the server's search, which knows designations and aliases. The client matched the raw text, so `--search "NGC 2264"` found nothing for `NGC2264`.
+  - Every command takes the object as an id, a designation in any spacing or case, or an alias (`sessions "M 83"`, `object "Crescent Nebula"`), and calls the API with the object's id.
+  - `plan` and `fetch --precalibrated`, for lights that are already calibrated: `no_dark`, `no_flat` and the other calibration issues are shown as ignored and do not block the export. Without the flag, a plan whose only errors are calibration issues suggests it.
+- `astro-processing`: Stage 3 and `reference/calibration-rules.md` describe pre-calibrated lights. Confirm them with the user, then fetch lights only and run WBPP without calibration frames.
+
 ## 0.3.0 (2026-11-15)
 
 Fixes from the first end-to-end run on real data (NGC 891, broadband OSC, 276 × 150 s).

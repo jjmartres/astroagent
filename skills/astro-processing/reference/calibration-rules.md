@@ -38,3 +38,13 @@ For each group (night · filter · exposure · gain · binning · temperature ·
 ## What the agent says
 
 List errors first, each with its fix, and stop: errors are fixed in Nebulis, then the plan is rebuilt. Then list warnings and ask the user to accept each one. Record accepted warnings in the session file and in `PROCESSING.md`.
+
+## Pre-calibrated lights
+
+Remote observatories such as Telescope.live deliver lights that are already calibrated: names end in `_cal.fits`, and the archive holds at most masters, no raw darks, flats or bias. Nebulis then finds no calibration frame for them, and every group shows `no_dark` and `no_flat` (sometimes `no_flat_calibration`).
+
+- Confirm with the user that the lights are calibrated: the `_cal` suffix, or the provider's notes. Do not assume it from missing darks alone; an uncalibrated night with no darks is still an error.
+- Run `nebulis.py plan` and `fetch` with `--precalibrated`. The calibration issues are shown as ignored; any other issue still has to be fixed or accepted.
+- The export holds lights only. In WBPP, add no darks, flats or bias, and leave the lights uncalibrated: WBPP goes straight to measurement, registration, local normalization and integration. Calibrating a second time with the provider's masters would apply the flats twice.
+- Masters shipped in the provider's archive (`_BIAS`, `_DARK`, `_FLAT`) are not needed for these lights. Record that in `PROCESSING.md`.
+- Gate G4 still applies: a flat residual comes from the provider's calibration and shows the same way.

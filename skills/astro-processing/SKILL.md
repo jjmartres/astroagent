@@ -65,6 +65,8 @@ Per night: `nebulis.py analysis <OBJECT> <DATE> --bad-only`. Report per night: m
 
 `nebulis.py plan <OBJECT> --dates <...>`. Read it against `reference/calibration-rules.md`: every group has a dark (same gain, exposure, binning; |ΔT| ≤ 2 °C), a flat **of the same filter** (D1 never with D2), and a flat-dark or bias; list every issue. Errors block: explain what to fix in Nebulis (usually: attach the flat set to the object, or shoot/import the missing dark). Warnings need an explicit acknowledgement each. Approval.
 
+Lights that are already calibrated (Telescope.live and other remote observatories deliver `*_cal.fits`) raise `no_dark` and `no_flat` on every group: confirm with the user that they are calibrated, then run `plan` and `fetch` with `--precalibrated` and follow "Pre-calibrated lights" in `reference/calibration-rules.md`.
+
 ## Stage 4 — Fetch
 
 `nebulis.py fetch <OBJECT> --dates <...> --dest <workspace>/data [--allow-warnings]` (only with the warnings acknowledged in Stage 3). Above a few GB, fetch one night per call (see the `nebulis` skill). Check the reported light count equals the plan, and the free disk space: WBPP needs about 4 × the size of the lights for its intermediate files. Read `<export>/manifest.json` and `README.txt`; record nights, groups and integration per filter in the session file.
