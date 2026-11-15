@@ -92,6 +92,57 @@ class NebulisCliTest(unittest.TestCase):
         self.assertIn("flat_other_night", r.stdout)
         self.assertIn("Flat_D1", r.stdout)
 
+    def test_objects_search_by_designation(self):
+        # The spaced designation used to find nothing: the client matched the raw text itself.
+        r = self.run_cli("--json", "objects", "--search", "NGC 4438")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual([o["id"] for o in json.loads(r.stdout)], ["NGC4438"])
+        r = self.run_cli("--json", "objects", "--search", "ngc 6888")  # an alias of Sh2-105
+        self.assertEqual([o["id"] for o in json.loads(r.stdout)], ["Sh2-105"])
+
+    def test_commands_take_a_spaced_designation(self):
+        r = self.run_cli("sessions", "NGC 4438")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("2021-12-05", r.stdout)
+        r = self.run_cli("object", "Crescent Nebula")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("Cygnus", r.stdout)
+        r = self.run_cli("sessions", "NGC 1")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("no library object", r.stderr)
+
+    def test_plan_precalibrated(self):
+        r = self.run_cli("plan", "NGC 4438", "--all")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("--precalibrated", r.stderr)
+        r = self.run_cli("plan", "NGC4438", "--all", "--precalibrated")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("errors 0 · warnings 1", r.stdout)
+        self.assertIn("2 calibration issues ignored", r.stdout)
+        self.assertIn("no_dark (ignored: lights already calibrated)", r.stdout)
+
+    def test_precalibrated_keeps_other_issues(self):
+        # Only calibration issues are set aside: unknown_settings is still a warning to accept.
+        with tempfile.TemporaryDirectory() as d:
+            r = self.run_cli("fetch", "NGC4438", "--all", "--dest", d, "--precalibrated")
+            self.assertEqual(r.returncode, 2)
+            self.assertIn("--allow-warnings", r.stderr)
+            self.assertEqual(os.listdir(d), [])
+
+    def test_fetch_precalibrated(self):
+        mock_nebulis.STATE["polls"] = 0
+        with tempfile.TemporaryDirectory() as d:
+            r = self.run_cli("fetch", "NGC4438", "--all", "--dest", d)
+            self.assertEqual(r.returncode, 2)
+            self.assertIn("--precalibrated", r.stderr)
+            self.assertEqual(os.listdir(d), [])
+            r = self.run_cli("--json", "fetch", "NGC 4438", "--all", "--dest", d, "--precalibrated", "--allow-warnings")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            summary = json.loads(r.stdout)
+            self.assertEqual(summary["lights"], 2)
+            self.assertEqual(summary["expectedLights"], 2)
+            self.assertFalse((Path(summary["path"]) / "Darks").exists())
+
     def test_fetch_requires_allow_warnings(self):
         with tempfile.TemporaryDirectory() as d:
             r = self.run_cli("fetch", "Sh2-105", "--all", "--dest", d)

@@ -13,15 +13,20 @@ script, and never put on a command line.
 
 Commands:
   status                                  server version and an authenticated test call
-  objects [--search TEXT]                 library objects
+  objects [--search TEXT]                 library objects; the search knows designations and aliases
+                                          ("NGC 2264", "Christmas Tree")
   object OBJECT                           one object: type, constellation, coordinates, distance, size
+                                          (OBJECT, here and below: id, designation or alias)
   sessions OBJECT                         nights of one object, with filters, exposures, sub counts
   analysis OBJECT DATE [--bad-only]       Frame Analysis report of one night (grades, flags, kept)
   review --keep|--reject|--reset PATH...  record your keep / reject call on frames (admin key)
-  plan OBJECT (--dates D [D ...] | --all) [--include-not-kept]
+  plan OBJECT (--dates D [D ...] | --all) [--include-not-kept] [--precalibrated]
                                           stacking plan: lights kept, matched calibration, issues
   fetch OBJECT (--dates D [D ...] | --all) --dest DIR [--layout wbpp|siril] [--include-not-kept]
-        [--allow-warnings] [--force]       download the stacking export and unpack it under DIR
+        [--precalibrated] [--allow-warnings] [--force]
+                                          download the stacking export and unpack it under DIR
+                                          (--precalibrated: lights already calibrated, so missing
+                                          darks, flats or bias are not errors)
   archives OBJECT                         project archives stored with the object
   telescopes                              telescope profiles: model, optical configs, filters
   site                                    the active observing site: coordinates, Bortle class
@@ -201,11 +206,43 @@ def resolve_dates(c: Client, obj: str, args) -> list[str]:
     return dates
 
 
-def plan_text(plan: dict) -> tuple[str, int, int]:
+# Plan issues about missing or imperfect calibration frames. Lights that are already calibrated
+# (Telescope.live `*_cal.fits`, any service that delivers calibrated subs) raise them on every group,
+# and they do not apply: --precalibrated leaves them out of the error and warning counts.
+CALIBRATION_ISSUES = {"no_dark", "dark_temp_far", "dark_expired", "no_flat", "flat_other_night",
+                      "no_flat_calibration", "bias_expired"}
+
+
+def counted_issues(plan: dict, precalibrated: bool) -> tuple[int, int, int]:
+    """Errors and warnings that still count, and how many calibration issues were set aside."""
+    errors = warnings = ignored = 0
+    for g in plan["groups"]:
+        for i in g.get("issues", []):
+            if precalibrated and i["code"] in CALIBRATION_ISSUES:
+                ignored += 1
+            elif i["severity"] == "error":
+                errors += 1
+            elif i["severity"] == "warning":
+                warnings += 1
+    return errors, warnings, ignored
+
+
+def only_calibration_errors(plan: dict) -> bool:
+    codes = [i["code"] for g in plan["groups"] for i in g.get("issues", []) if i["severity"] == "error"]
+    return bool(codes) and all(code in CALIBRATION_ISSUES for code in codes)
+
+
+PRECALIBRATED_HINT = ("if the lights are already calibrated (Telescope.live *_cal.fits, for example), "
+                      "re-run with --precalibrated")
+
+
+def plan_text(plan: dict, precalibrated: bool = False) -> tuple[str, int, int]:
     lines = [f"{plan['objectId']} · nights {', '.join(plan['nights'])}"]
     t = plan["totals"]
+    errors, warnings, ignored = counted_issues(plan, precalibrated)
     lines.append(f"lights {t['lights']} kept, {t['excluded']} not kept · calibration frames {t['calibrationFrames']}"
-                 f" · {fmt_bytes(t['bytes'])} · errors {t['errors']} · warnings {t['warnings']}")
+                 f" · {fmt_bytes(t['bytes'])} · errors {errors} · warnings {warnings}"
+                 + (f" · {ignored} calibration issues ignored (lights already calibrated)" if ignored else ""))
     for g in plan["groups"]:
         n = g["frames"] if plan.get("includeNotKept") else g["kept"]
         lines.append(f"\n{g['night']} · filter {g['filter'] or 'none'} · {g['exposureSec']}s · gain {g['gain']}"
@@ -225,11 +262,12 @@ def plan_text(plan: dict) -> tuple[str, int, int]:
             lines.append(f"  {label:<9} {c['name']} · {c['fileCount']} files · {', '.join(extra)}")
         for i in g.get("issues", []):
             params = f" {json.dumps(i['params'])}" if i.get("params") else ""
-            lines.append(f"  ! {i['severity']}: {i['code']}{params}")
+            note = " (ignored: lights already calibrated)" if precalibrated and i["code"] in CALIBRATION_ISSUES else ""
+            lines.append(f"  ! {i['severity']}: {i['code']}{params}{note}")
     unmeasured = plan.get("unmeasuredByNight") or {}
     if unmeasured:
         lines.append("\nunmeasured frames (count as kept): " + ", ".join(f"{k}: {v}" for k, v in unmeasured.items()))
-    return "\n".join(lines), t["errors"], t["warnings"]
+    return "\n".join(lines), errors, warnings
 
 
 # ─── commands ───────────────────────────────────────────────────────────────
@@ -241,24 +279,40 @@ def cmd_status(c: Client, args):
     out(args, data, f"Nebulis {data['version']} at {c.base} · authenticated · {data['objects']} library objects")
 
 
+def list_objects(c: Client, search: str = "") -> list:
+    # The server's search knows catalog designations and aliases: "NGC 2264", "ngc2264" and
+    # "Christmas Tree" all find NGC2264. Matching here on the raw text missed the spaced form.
+    path = "/library/objects" + (f"?search={q(search)}" if search else "")
+    objs = c.call("GET", path) or []
+    if isinstance(objs, dict):
+        objs = objs.get("items") or objs.get("objects") or []
+    return objs
+
+
 def cmd_objects(c: Client, args):
-    objs = c.call("GET", "/library/objects") or []
-    if args.search:
-        s = args.search.lower()
-        objs = [o for o in objs if s in (o.get("id", "") + " " + o.get("name", "") + " " + o.get("folderName", "")).lower()]
+    objs = list_objects(c, args.search or "")
     rows = [f"{o['id']:<16} {o.get('name', ''):<32} sessions {o.get('sessionCount', '?')}" for o in objs]
     out(args, objs, "\n".join(rows) or "no objects")
 
 
+def squash(s: object) -> str:
+    """Case, spaces and underscores do not tell designations apart: "NGC 2264" is NGC2264."""
+    return "".join(str(s or "").split()).replace("_", "").lower()
+
+
 def find_object(c: Client, name: str) -> dict:
-    objs = c.call("GET", "/library/objects") or []
-    if isinstance(objs, dict):
-        objs = objs.get("items") or objs.get("objects") or []
-    n = name.lower()
+    objs = list_objects(c)
+    n = squash(name)
     for o in objs:
-        if n in (str(o.get("id", "")).lower(), str(o.get("folderName", "")).lower(), str(o.get("catalogId", "")).lower()):
+        if n in {squash(o.get(k)) for k in ("id", "folderName", "catalogId")}:
             return o
-    die(f"no library object {name!r}; list them with: nebulis.py objects --search {name}", 1)
+    for o in objs:
+        if n in {squash(a) for a in [o.get("name"), *(o.get("aliases") or []), *(o.get("nicknames") or [])]}:
+            return o
+    hits = list_objects(c, name)
+    if len(hits) == 1:
+        return hits[0]
+    die(f"no library object {name!r}; list them with: nebulis.py objects --search {name!r}", 1)
 
 
 def cmd_object(c: Client, args):
@@ -347,9 +401,11 @@ def cmd_plan(c: Client, args):
     dates = resolve_dates(c, args.object, args)
     plan = c.call("POST", f"/library/objects/{q(args.object)}/stacking-export/plan",
                   {"dates": dates, "includeNotKept": bool(args.include_not_kept)})
-    text, errors, _ = plan_text(plan)
+    text, errors, _ = plan_text(plan, args.precalibrated)
     out(args, plan, text)
     if errors:
+        if not args.precalibrated and only_calibration_errors(plan):
+            print(f"note: {PRECALIBRATED_HINT}", file=sys.stderr)
         sys.exit(2)
 
 
@@ -357,10 +413,11 @@ def cmd_fetch(c: Client, args):
     dates = resolve_dates(c, args.object, args)
     body = {"dates": dates, "includeNotKept": bool(args.include_not_kept), "layout": args.layout}
     plan = c.call("POST", f"/library/objects/{q(args.object)}/stacking-export/plan", body)
-    text, errors, warnings = plan_text(plan)
+    text, errors, warnings = plan_text(plan, args.precalibrated)
     if errors:
         print(text)
-        die("the stacking plan has errors; fix them in Nebulis (attach flats, add darks) before fetching", 2)
+        hint = f"; {PRECALIBRATED_HINT}" if not args.precalibrated and only_calibration_errors(plan) else ""
+        die(f"the stacking plan has errors; fix them in Nebulis (attach flats, add darks) before fetching{hint}", 2)
     if warnings and not args.allow_warnings:
         print(text)
         die("the stacking plan has warnings; review them, then re-run with --allow-warnings", 2)
@@ -519,6 +576,8 @@ def main(argv: list[str] | None = None) -> None:
         d = s.add_mutually_exclusive_group(required=True)
         d.add_argument("--dates", nargs="+"); d.add_argument("--all", action="store_true")
         s.add_argument("--include-not-kept", action="store_true")
+        s.add_argument("--precalibrated", action="store_true",
+                       help="the lights are already calibrated: missing darks, flats or bias are not errors")
         if name == "fetch":
             s.add_argument("--dest", required=True)
             s.add_argument("--layout", choices=["wbpp", "siril"], default="wbpp")
@@ -542,6 +601,10 @@ def main(argv: list[str] | None = None) -> None:
                 "review": cmd_review, "plan": cmd_plan, "fetch": cmd_fetch, "archives": cmd_archives,
                 "push": cmd_push, "images": cmd_images, "image": cmd_image}
     try:
+        if getattr(args, "object", None) and args.cmd != "object":
+            # Every command takes the object as the user writes it ("NGC 2264", "m 31") and calls
+            # the API with its id.
+            args.object = find_object(c, args.object)["id"]
         handlers[args.cmd](c, args)
     except ApiError as e:
         hint = ""
