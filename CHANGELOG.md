@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.1 (2026-11-15)
 
 From importing a Telescope.live library (calibrated lights from CHI-1, SPA-1, SPA-2 and AUS-2) into Nebulis.
 
