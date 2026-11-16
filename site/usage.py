@@ -66,11 +66,11 @@ SESSION = [
     ("tool", ("pixinsight - run_pjsr (MCP)(code: <agentic/work/icons.js>)", [
         "14 process instances serialized"])),
     ("tool", (f"Bash({AP} xpsm ~/Astro/Processing/Sh2-105 --pjsr-result agentic/work/icons-result.json)", [
-        "Process Icons - Crescent Nebula - Foraxx workflow.xpsm: 14 icon(s)"])),
+        "Sh2-105_Foraxx_2026-11-06.xpsm: 14 icon(s)"])),
     ("say", "{a6}"),
     ("user", "{u6}"),
-    ("tool", (f"Bash({NB} push Sh2-105 --bundle output/push --name Sh2-105_2026-11-06_processing.zip)", [
-        "stored Sh2-105_2026-11-06_processing.zip (41.3 MB) with Sh2-105"])),
+    ("tool", (f"Bash({NB} push Sh2-105 --bundle output/push --name Sh2-105_Foraxx_2026-11-06_processing.zip)", [
+        "stored Sh2-105_Foraxx_2026-11-06_processing.zip (41.3 MB) with Sh2-105"])),
     ("say", "{a7}"),
 ]
 

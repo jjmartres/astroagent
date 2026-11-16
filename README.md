@@ -157,9 +157,13 @@ output/rig.json                target, site, optics, camera, filters, sequences 
 output/project.json            PixInsight project description (Description field)
 output/doc/index.html          documentation page (Documentation field)
 output/doc/session-report.html every stage: measured, proposed, decided, gates
-output/Process Icons - <name> - <palette> workflow.xpsm
+output/<NAME>.xpsm             process icons
+output/pixinsight/<NAME>.pxiproject  the PixInsight project, saved by you
+output/push/                   the archive for Nebulis, same layout every run
 output/astrobin.json           AstroBin form fields, when you ask for them
 ```
+
+`<NAME>` is `<OBJECT>_<PALETTE>_<YYYY-MM-DD>` (Nebulis object id, palette, processing day), for example `SH2-112_HOO_2026-11-16`: the final files, the process icons, the PixInsight project and the archive pushed to Nebulis (`<NAME>_processing.zip`) all carry it, and every archive has the same folders (`final/`, `doc/`, `pixinsight/`, `session/`).
 
 `rig.json` is built from the export's `manifest.json`, the FITS headers of the lights and your Nebulis telescope profile and observing site; the agent asks you only for what none of them holds (aperture, a description per filter...). The pages use the astroagent colours with a light/dark switch and work offline, in a browser or in PixInsight. The process icons come from the connector's call log, serialized by PixInsight itself.
 
@@ -251,7 +255,7 @@ Open Claude Code or OpenCode in a terminal and ask in plain words. The agent loa
   ⎿  14 process instances serialized
 ⏺ Bash(python3 ~/.claude/skills/astro-project/scripts/astro_project.py xpsm ~/Astro/Processing/Sh2-105
   --pjsr-result agentic/work/icons-result.json)
-  ⎿  Process Icons - Crescent Nebula - Foraxx workflow.xpsm: 14 icon(s)
+  ⎿  Sh2-105_Foraxx_2026-11-06.xpsm: 14 icon(s)
 ⏺ Foraxx kept. Exported final/Sh2-105_Foraxx_2026-11-06 as .xisf, .tif and .jpg, and wrote
   PROCESSING.md, the documentation page, the session report and 14 process icons. Store them
   with Sh2-105 in Nebulis?
@@ -259,8 +263,8 @@ Open Claude Code or OpenCode in a terminal and ask in plain words. The agent loa
 > yes
 
 ⏺ Bash(python3 ~/.claude/skills/nebulis/scripts/nebulis.py push Sh2-105 --bundle output/push
-  --name Sh2-105_2026-11-06_processing.zip)
-  ⎿  stored Sh2-105_2026-11-06_processing.zip (41.3 MB) with Sh2-105
+  --name Sh2-105_Foraxx_2026-11-06_processing.zip)
+  ⎿  stored Sh2-105_Foraxx_2026-11-06_processing.zip (41.3 MB) with Sh2-105
 ⏺ Stored in Nebulis under Project archives. The final image is open in PixInsight; every other
   view of this session is closed.
 
@@ -291,7 +295,7 @@ The tests run `nebulis.py` against a local mock of the Nebulis API, and `astro_p
 
 ## Status
 
-Version 0.3.1 ([releases](https://github.com/jjmartres/astroagent/releases)), run end to end once on real data (NGC 891, broadband one-shot colour, 11.5 h); the dual-band path has not been run end to end yet. See `CHANGELOG.md`. To cut a release, bump the version in `.claude-plugin/plugin.json` and add its section to `CHANGELOG.md`: on the push to `main`, `.github/workflows/release.yml` creates the `vX.Y.Z` tag and the GitHub release from the CHANGELOG, and moves the `latest` tag. It can also be run by hand from the Actions tab. Every processing value in the skills is a starting point; tune it on your data and commit the values that work.
+Version 0.4.0 ([releases](https://github.com/jjmartres/astroagent/releases)), run end to end on real data twice: NGC 891 (broadband one-shot colour, 11.5 h) and SH2-112 (dual-band D1/D2 on a one-shot colour camera, HOO, 11.8 h). See `CHANGELOG.md`. To cut a release, bump the version in `.claude-plugin/plugin.json` and add its section to `CHANGELOG.md`: on the push to `main`, `.github/workflows/release.yml` creates the `vX.Y.Z` tag and the GitHub release from the CHANGELOG, and moves the `latest` tag. It can also be run by hand from the Actions tab. Every processing value in the skills is a starting point; tune it on your data and commit the values that work.
 
 ## Credits
 

@@ -11,7 +11,12 @@ Every file goes into the processing workspace laid out by the astro-processing s
   <workspace>/output/doc/index.html            documentation page                     (doc)
   <workspace>/output/doc/session-report.html   what was done, stage by stage          (report)
   <workspace>/output/astrobin.json             AstroBin form fields, optional         (astrobin)
-  <workspace>/output/Process Icons - <name> - <palette> workflow.xpsm                 (icons, then xpsm)
+  <workspace>/output/<NAME>.xpsm                process icons                          (icons, then xpsm)
+  <workspace>/output/push/                     the project archive's content, standard layout (bundle)
+
+<NAME> is <OBJECT>_<PALETTE>_<YYYY-MM-DD>: the Nebulis object id (rig.json target.name), the palette from
+report.json and the processing day. Every run names its PixInsight project, final files, icons and archive
+from it (see the names command), so the archives pushed to Nebulis all share one layout.
 
 Commands:
   scan WS [--export DIR] [--object F] [--telescope F] [--site F] [--set KEY=VALUE ...]
@@ -28,7 +33,9 @@ Commands:
                                   read the pixinsight-connector call logs and write agentic/work/icons.json and
                                   agentic/work/icons.js, the PJSR to run with run_pjsr_file; --from-seq skips an
                                   earlier attempt, --exclude-view drops rejected candidates and diagnostic views
-  xpsm WS [--pjsr-result FILE]    wrap what icons.js wrote (agentic/work/icons-result.json) into the .xpsm file
+  xpsm WS [--pjsr-result FILE]    wrap what icons.js wrote (agentic/work/icons-result.json) into output/<NAME>.xpsm
+  names WS [--date D] [--palette P]  print <NAME> and every file name derived from it (--json for a dict)
+  bundle WS [--date D] [--add FILE ...]  rebuild output/push/ in the standard layout and print the push command
 
 Exit codes: 0 ok, 1 usage error, 2 incomplete or invalid data.
 """
@@ -40,6 +47,7 @@ import json
 import math
 import os
 import re
+import shutil
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -47,7 +55,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SKILL = HERE.parent
 SCHEMA = SKILL / "reference" / "rig.schema.json"
-VERSION = "0.3.1"
+VERSION = "0.4.0"
 FITS_EXT = (".fit", ".fits", ".fts")
 
 
@@ -891,7 +899,8 @@ def cmd_xpsm(args) -> int:
     if not blocks:
         die("no instance could be serialized; PixInsight's toSource(\"XPSM 1.0\") may be unavailable in this build", 2)
     name = research.get("common_name") or (rig.get("target") or {}).get("common_name") or (rig.get("target") or {}).get("name") or ws.root.name
-    palette = report.get("palette") or "processing"
+    std = run_names(ws)
+    palette = std["palette"]
     now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     doc = "\n".join([
         '<?xml version="1.0" encoding="UTF-8"?>',
@@ -901,13 +910,156 @@ def cmd_xpsm(args) -> int:
         '<xpsm version="1.0" xmlns="http://www.pixinsight.com/xpsm" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
         'xsi:schemaLocation="http://www.pixinsight.com/xpsm http://pixinsight.com/xpsm/xpsm-1.0.xsd">',
         *blocks, *icon_rows, "</xpsm>", ""])
-    fname = re.sub(r'[\\/:*?"<>|]', "-", f"Process Icons - {name} - {palette} workflow.xpsm")
-    p = ws.out(fname)
+    p = ws.out(std["xpsm"])
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(doc, encoding="utf-8")
     print(f"{p.name}: {len(blocks)} icon(s) · {p}")
     print("in PixInsight: Process → Process Icons → Merge Process Icons keeps the icons already on the workspace (Load replaces them)")
     return 0 if not errors else 2
+
+
+# ─── Standard names and the project archive ─────────────────────────────────
+
+DATE_RE = r"\d{4}-\d{2}-\d{2}"
+SESSION_FILES = ("astro-session.md", "call-log.md", "ss_flagged.txt", "subframeselector*.csv")
+ARCHIVE_JSON = ("rig.json", "research.json", "report.json", "project.json", "astrobin.json")
+
+
+def name_part(text: str) -> str:
+    """One file-name-safe token: spaces become '-', anything outside [A-Za-z0-9+.-] is dropped."""
+    t = re.sub(r"\s+", "-", str(text).strip())
+    return re.sub(r"[^A-Za-z0-9+.\-]", "", t).strip("-.")
+
+
+def run_names(ws: Workspace, date: str | None = None, palette: str | None = None) -> dict:
+    """<OBJECT>_<PALETTE>_<YYYY-MM-DD> and the names derived from it. The date is --date, else the one in
+    output/final/<OBJECT>_<PALETTE>_<date>.*, else today."""
+    rig, report = ws.load("rig.json") or {}, ws.load("report.json") or {}
+    obj = name_part((rig.get("target") or {}).get("name") or ws.root.name)
+    pal = name_part(palette or report.get("palette") or "")
+    if not obj:
+        die("no object id: run scan first (rig.json target.name)", 2)
+    if not pal:
+        die("no palette: write output/report.json first (its palette field) or pass --palette", 2)
+    if date:
+        if not re.fullmatch(DATE_RE, date):
+            die(f"--date must be YYYY-MM-DD, not {date}", 1)
+    else:
+        found = sorted({m.group(1) for f in (ws.output / "final").glob("*")
+                        for m in [re.match(rf"{re.escape(obj)}_{re.escape(pal)}_({DATE_RE})", f.name)] if m})
+        date = found[-1] if found else dt.date.today().isoformat()
+    stem = f"{obj}_{pal}_{date}"
+    return {
+        "object": obj, "palette": pal, "date": date, "name": stem,
+        "pxiproject": f"pixinsight/{stem}.pxiproject",
+        "final": {"xisf": f"final/{stem}.xisf", "tif": f"final/{stem}.tif", "jpg": f"final/{stem}.jpg",
+                  "web": f"final/{stem}_web.jpg"},
+        "xpsm": f"{stem}.xpsm",
+        "archive": f"{stem}_processing.zip",
+        "title": f"{pal} final",
+    }
+
+
+def cmd_names(args) -> int:
+    ws = Workspace(args.workspace)
+    n = run_names(ws, args.date, args.palette)
+    if args.json:
+        print(json.dumps(n, indent=2))
+        return 0
+    print(f"name        {n['name']}")
+    print(f"PixInsight  output/{n['pxiproject']}  (File > Save Project As)")
+    for k in ("xisf", "tif", "jpg", "web"):
+        print(f"final       output/{n['final'][k]}")
+    print(f"icons       output/{n['xpsm']}")
+    print(f"archive     {n['archive']}  (title \"{n['title']}\")")
+    return 0
+
+
+def copy_into(src: Path, dest: Path) -> None:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if src.is_dir():
+        shutil.copytree(src, dest, symlinks=False)
+    else:
+        shutil.copy2(src, dest)
+
+
+def cmd_bundle(args) -> int:
+    """Rebuild output/push/ with the same layout for every run:
+    PROCESSING.md, the JSON files, <NAME>.xpsm, doc/, final/, pixinsight/<NAME>.pxiproject/, session/."""
+    ws = Workspace(args.workspace)
+    n = run_names(ws, args.date)
+    push = ws.output / "push"
+    missing, notes, placed = [], [], []
+
+    def put(src: Path, rel: str) -> None:
+        copy_into(src, push / rel)
+        placed.append(rel + ("/" if src.is_dir() else ""))
+
+    if push.exists():
+        shutil.rmtree(push)
+    push.mkdir(parents=True)
+    if ws.out("PROCESSING.md").is_file():
+        put(ws.out("PROCESSING.md"), "PROCESSING.md")
+    else:
+        missing.append("output/PROCESSING.md")
+    for j in ARCHIVE_JSON:
+        if ws.out(j).is_file():
+            put(ws.out(j), j)
+        elif j in ("rig.json", "report.json", "project.json"):
+            missing.append(f"output/{j}")
+    xpsm = ws.out(n["xpsm"])
+    others = sorted(p for p in ws.output.glob("*.xpsm") if p != xpsm)
+    if xpsm.is_file():
+        put(xpsm, n["xpsm"])
+    elif len(others) == 1:
+        put(others[0], n["xpsm"])
+        notes.append(f"{others[0].name} stored as {n['xpsm']}")
+    else:
+        notes.append(f"no output/{n['xpsm']}: no process icons in the archive")
+    if (ws.output / "doc").is_dir():
+        put(ws.output / "doc", "doc")
+    else:
+        missing.append("output/doc/")
+    final = sorted(p for p in (ws.output / "final").glob("*") if p.is_file()) if (ws.output / "final").is_dir() else []
+    for f in final:
+        put(f, f"final/{f.name}")
+        if not f.name.startswith(n["name"]):
+            notes.append(f"final/{f.name} does not start with {n['name']}")
+    if not (ws.output / n["final"]["xisf"]).is_file():
+        missing.append(f"output/{n['final']['xisf']}")
+    projects = sorted(p for p in ws.output.glob("pixinsight/*.pxiproject") if p.is_dir())
+    if len(projects) == 1:
+        put(projects[0], n["pxiproject"])
+        if projects[0].name != Path(n["pxiproject"]).name:
+            notes.append(f"pixinsight/{projects[0].name} stored as {n['pxiproject']}; save it under that name next time")
+    elif projects:
+        missing.append(f"one PixInsight project in output/pixinsight/, found {len(projects)}")
+    else:
+        notes.append(f"no PixInsight project: save it as output/{n['pxiproject']} to include it")
+    for pattern in SESSION_FILES:
+        for f in sorted(ws.work.glob(pattern)):
+            put(f, f"session/{f.name}")
+    for extra in args.add or []:
+        f = Path(extra).expanduser()
+        if not f.exists():
+            die(f"{f} not found", 1)
+        put(f, f"session/{f.name}")
+    for rel in placed:
+        print(f"  {rel}")
+    for note in notes:
+        print(f"note: {note}")
+    if missing:
+        print("missing:")
+        for m in missing:
+            print(f"  - {m}")
+        return 2
+    env = (ws.load("report.json") or {}).get("environment") or {}
+    software = ", ".join(x for x in (f"PixInsight {env['PixInsight']}" if env.get("PixInsight") else "PixInsight",
+                                      f"astroagent {env.get('astroagent') or VERSION}") if x)
+    print(f"archive: {n['archive']} ({len(placed)} entries in {push})")
+    print(f"push: nebulis.py push {n['object']} --bundle {push} --name {n['archive']} "
+          f"--title \"{n['title']}\" --software \"{software}\"")
+    return 0
 
 
 # ─── HTML pages ─────────────────────────────────────────────────────────────
@@ -960,9 +1112,14 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--exclude-view", help="regex of view ids to leave out (rejected candidates, diagnostics)")
     s = sub.add_parser("xpsm"); s.add_argument("workspace")
     s.add_argument("--pjsr-result", help="default: agentic/work/icons-result.json, written by icons.js")
+    s = sub.add_parser("names"); s.add_argument("workspace"); s.add_argument("--date", help="YYYY-MM-DD, default: from output/final or today")
+    s.add_argument("--palette", help="default: report.json palette"); s.add_argument("--json", action="store_true")
+    s = sub.add_parser("bundle"); s.add_argument("workspace"); s.add_argument("--date", help="YYYY-MM-DD, default: from output/final or today")
+    s.add_argument("--add", nargs="+", metavar="FILE", help="more session records to put in session/")
     args = p.parse_args(argv)
     handlers = {"scan": cmd_scan, "validate": cmd_validate, "project": cmd_project, "doc": cmd_doc, "report": cmd_report,
-                "astrobin": cmd_astrobin, "icons": cmd_icons, "xpsm": cmd_xpsm}
+                "astrobin": cmd_astrobin, "icons": cmd_icons, "xpsm": cmd_xpsm,
+                "names": cmd_names, "bundle": cmd_bundle}
     return handlers[args.cmd](args)
 
 
