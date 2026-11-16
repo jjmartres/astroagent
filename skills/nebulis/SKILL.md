@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: jjmartres
-  version: "0.3.1"
+  version: "0.4.0"
 ---
 
 # Nebulis
@@ -38,7 +38,7 @@ Some commands need an **admin** key: `review`, `push` and `image`. A 403 means t
 | `archives OBJECT` | Project archives already stored with the object. |
 | `telescopes` | Telescope profiles: model, optical configurations (focal length, pixel size, sensor size), sensor type, filters. Connection details are never printed. |
 | `site` | The active observing site: name, coordinates, Bortle class. |
-| `push OBJECT --bundle DIR \| --file FILE` | Stores a **project archive** (`.zip`, `.xpsm` or `.pxiproject`) with the object, under Projects (`--bundle` zips a folder). Refuses to overwrite a same-named archive unless `--force`. **One archive per processing run**: everything goes in it (final files, PROCESSING.md, JSON, doc, icons), not the raw data or scratch. Never zip a JPEG to push it: it would show as a second project, not as an image. |
+| `push OBJECT --bundle DIR \| --file FILE` | Stores a **project archive** (`.zip`, `.xpsm` or `.pxiproject`) with the object, under Projects (`--bundle` zips a folder). Refuses to overwrite a same-named archive unless `--force`. **One archive per processing run**, named `<OBJECT>_<PALETTE>_<YYYY-MM-DD>_processing.zip` and built by `astro_project.py bundle` (astro-project skill) so every archive has the same layout; not the raw data or scratch. Never zip a JPEG to push it: it would show as a second project, not as an image. |
 | `images OBJECT` | Finished images stored with the object (processed images), object-level or per session. |
 | `image OBJECT --file FILE [--title T] [--notes N] [--force]` | Adds a finished image (JPG, PNG, TIFF, XISF, FITS) to the **object** (not to a session): it shows in the object's Processed images and in the gallery, dated by its upload day. Use it for the final JPEG at Stage 12. Refuses a same-named image unless `--force`. |
 

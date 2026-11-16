@@ -17,7 +17,7 @@ Goal: a `.xpsm` file whose icons are the processes this session actually ran, wi
    - `--exclude-view REGEX` drops calls on views that were thrown away, e.g. `--exclude-view '^(cand_|diag_|.*_s[0-9]$|.*_h[0-9]$)'`.
    Check the list it prints against PROCESSING.md before going on.
 2. **`run_pjsr_file`** with `agentic/work/icons.js`. It rebuilds each instance in PixInsight and asks PixInsight to serialize it (`ProcessInstance.toSource("XPSM 1.0", id)`), so names, enumerations and tables are PixInsight's own. It writes the full result to `agentic/work/icons-result.json` itself (an SPCC instance carries its filter and QE curves, too large to come back through the call) and returns one line per icon: `ok` or the error.
-3. **`astro_project.py xpsm <WS>`** (or `--pjsr-result FILE` for another file) wraps the instances into `output/Process Icons - <common name> - <palette> workflow.xpsm`, one column at `xpos` 2000, 40 px apart, workspace `Workspace01`.
+3. **`astro_project.py xpsm <WS>`** (or `--pjsr-result FILE` for another file) wraps the instances into `output/<NAME>.xpsm` (`<OBJECT>_<PALETTE>_<YYYY-MM-DD>`, see `astro_project.py names`), one column at `xpos` 2000, 40 px apart, workspace `Workspace01`.
 
 ## Limits
 

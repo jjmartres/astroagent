@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0 (2026-11-16)
+
+One name per processing run, and one layout for every project archive pushed to Nebulis. The first two archives (NGC891, SH2-112) differed: a PixInsight project in one only, named `ngc891.pxiproject`; session records in `processing/` or `work/`; the JPEG for Nebulis named `_final.jpg` or `_q95.jpg`.
+
+- `astro-project`:
+  - A run is named `<OBJECT>_<PALETTE>_<YYYY-MM-DD>` (Nebulis object id, palette, processing day). New `names` command: prints it and every name derived from it (PixInsight project, final files, icons, archive); the date comes from `output/final/` when the files exist.
+  - New `bundle` command: rebuilds `output/push/` with a fixed layout (`PROCESSING.md`, the JSON files, `<NAME>.xpsm`, `doc/`, `final/`, `pixinsight/<NAME>.pxiproject/`, `session/`), notes files that do not follow the name, exits 2 on what is missing, and prints the `nebulis.py push` command with the archive name, title and software.
+  - `xpsm` writes `output/<NAME>.xpsm` instead of `Process Icons - <name> - <palette> workflow.xpsm`; it needs the palette from `report.json`.
+- `astro-processing`: Stage 11 exports `final/<NAME>.xisf`, `.tif`, `_web.jpg`, and `<NAME>.jpg` is the quality-95 JPEG for Nebulis and AstroBin (no more PixInsight JPEG beside it). Stage 12 asks the user to save the PixInsight project as `output/pixinsight/<NAME>.pxiproject`, then builds the archive with `bundle`.
+- `nebulis`: the skill names the archive `<NAME>_processing.zip`, built by `bundle`.
+
 ## 0.3.1 (2026-11-15)
 
 From importing a Telescope.live library (calibrated lights from CHI-1, SPA-1, SPA-2 and AUS-2) into Nebulis.

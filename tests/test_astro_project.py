@@ -163,7 +163,7 @@ class AstroProjectTest(unittest.TestCase):
         shutil.copy(FIX / "report.json", self.ws / "output" / "report.json")
         r = self.run_cli("xpsm", self.ws, "--pjsr-result", self.work / "res.json")
         self.assertEqual(r.returncode, 2)                                 # one icon failed: reported
-        x = next((self.ws / "output").glob("Process Icons - * - Foraxx workflow.xpsm")).read_text()
+        x = next((self.ws / "output").glob("Sh2-105_Foraxx_*.xpsm")).read_text()
         self.assertIn(f'id="{icons[0]["id"]}_instance"', x)
         self.assertIn(f'<icon id="{icons[0]["id"]}" instance="{icons[0]["id"]}_instance"', x)
         self.assertTrue(x.rstrip().endswith("</xpsm>"))
@@ -186,8 +186,63 @@ class AstroProjectTest(unittest.TestCase):
         res = [{"id": icons[0]["id"], "xml": '<instance class="StarXTerminator" version="1" id="x">\n'
                                              '   <parameter id="overlap" value="0.50"/>\n</instance>'}]
         (self.work / "icons-result.json").write_text(json.dumps(res))   # what icons.js writes itself
+        shutil.copy(FIX / "report.json", self.ws / "output" / "report.json")   # the palette names the file
         r = self.run_cli("xpsm", self.ws)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_names(self):
+        self.scan("--set", "telescope.aperture_mm=91")
+        r = self.run_cli("names", self.ws)
+        self.assertEqual(r.returncode, 2)                                 # no palette before report.json
+        shutil.copy(FIX / "report.json", self.ws / "output" / "report.json")
+        (self.ws / "output" / "final").mkdir()
+        (self.ws / "output" / "final" / "Sh2-105_Foraxx_2026-11-06.xisf").write_bytes(b"x")
+        r = self.run_cli("names", self.ws, "--json")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        n = json.loads(r.stdout)
+        self.assertEqual(n["name"], "Sh2-105_Foraxx_2026-11-06")           # date taken from output/final
+        self.assertEqual(n["pxiproject"], "pixinsight/Sh2-105_Foraxx_2026-11-06.pxiproject")
+        self.assertEqual(n["archive"], "Sh2-105_Foraxx_2026-11-06_processing.zip")
+        n = json.loads(self.run_cli("names", self.ws, "--json", "--palette", "H O O", "--date", "2026-12-01").stdout)
+        self.assertEqual(n["name"], "Sh2-105_H-O-O_2026-12-01")
+        self.assertEqual(self.run_cli("names", self.ws, "--date", "01/12/2026").returncode, 1)
+
+    def test_bundle(self):
+        self.scan("--set", "telescope.aperture_mm=91")
+        out = self.ws / "output"
+        shutil.copy(FIX / "research.json", out / "research.json")
+        shutil.copy(FIX / "report.json", out / "report.json")
+        r = self.run_cli("bundle", self.ws)
+        self.assertEqual(r.returncode, 2)                                 # nothing processed yet
+        self.assertIn("output/PROCESSING.md", r.stdout)
+        (out / "final").mkdir()
+        for suffix in (".xisf", ".tif", ".jpg", "_web.jpg"):
+            (out / "final" / f"Sh2-105_Foraxx_2026-11-06{suffix}").write_bytes(b"x")
+        (out / "PROCESSING.md").write_text("# log\n")
+        for cmd in ("project", "report", "doc"):
+            self.assertEqual(self.run_cli(cmd, self.ws).returncode, 0)
+        (out / "Process Icons - Crescent Nebula - Foraxx workflow.xpsm").write_text("<xpsm/>")   # older name
+        prj = out / "pixinsight" / "sh2-105.pxiproject"
+        (prj / "project.data").mkdir(parents=True)
+        (prj / "project.xosm").write_text("<xosm/>")
+        (self.work / "astro-session.md").write_text("session")
+        (self.work / "call-log.md").write_text("calls")
+        (self.work / "icons.js").write_text("scratch")
+        (out / "push" / "stale.txt").write_text("old")
+        r = self.run_cli("bundle", self.ws)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        push = out / "push"
+        files = sorted(str(p.relative_to(push)) for p in push.rglob("*") if p.is_file())
+        stem = "Sh2-105_Foraxx_2026-11-06"
+        for rel in ("PROCESSING.md", "rig.json", "report.json", "project.json", "research.json", f"{stem}.xpsm",
+                    "doc/index.html", "doc/session-report.html", f"final/{stem}.xisf", f"final/{stem}_web.jpg",
+                    f"pixinsight/{stem}.pxiproject/project.xosm", "session/astro-session.md", "session/call-log.md"):
+            self.assertIn(rel, files)
+        self.assertNotIn("stale.txt", files)                              # rebuilt from scratch
+        self.assertNotIn("session/icons.js", files)                       # no scratch
+        self.assertIn(f"--name {stem}_processing.zip", r.stdout)
+        self.assertIn('--title "Foraxx final"', r.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
