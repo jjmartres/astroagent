@@ -10,6 +10,8 @@ One name per processing run, and one layout for every project archive pushed to 
   - `xpsm` writes `output/<NAME>.xpsm` instead of `Process Icons - <name> - <palette> workflow.xpsm`; it needs the palette from `report.json`.
 - `astro-processing`: Stage 11 exports `final/<NAME>.xisf`, `.tif`, `_web.jpg`, and `<NAME>.jpg` is the quality-95 JPEG for Nebulis and AstroBin (no more PixInsight JPEG beside it). Stage 12 asks the user to save the PixInsight project as `output/pixinsight/<NAME>.pxiproject`, then builds the archive with `bundle`.
 - `nebulis`: the skill names the archive `<NAME>_processing.zip`, built by `bundle`.
+- README: the dual-band path has now run end to end (SH2-112, HOO, 11.8 h).
+- The archives of the first two runs (NGC891, SH2-112) were rebuilt with `bundle` and pushed again under the new names.
 
 ## 0.3.1 (2026-11-15)
 

@@ -1055,7 +1055,7 @@ def cmd_bundle(args) -> int:
         return 2
     env = (ws.load("report.json") or {}).get("environment") or {}
     software = ", ".join(x for x in (f"PixInsight {env['PixInsight']}" if env.get("PixInsight") else "PixInsight",
-                                      f"astroagent {VERSION}") if x)
+                                      f"astroagent {env.get('astroagent') or VERSION}") if x)
     print(f"archive: {n['archive']} ({len(placed)} entries in {push})")
     print(f"push: nebulis.py push {n['object']} --bundle {push} --name {n['archive']} "
           f"--title \"{n['title']}\" --software \"{software}\"")

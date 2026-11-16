@@ -295,7 +295,7 @@ The tests run `nebulis.py` against a local mock of the Nebulis API, and `astro_p
 
 ## Status
 
-Version 0.4.0 ([releases](https://github.com/jjmartres/astroagent/releases)), run end to end once on real data (NGC 891, broadband one-shot colour, 11.5 h); the dual-band path has not been run end to end yet. See `CHANGELOG.md`. To cut a release, bump the version in `.claude-plugin/plugin.json` and add its section to `CHANGELOG.md`: on the push to `main`, `.github/workflows/release.yml` creates the `vX.Y.Z` tag and the GitHub release from the CHANGELOG, and moves the `latest` tag. It can also be run by hand from the Actions tab. Every processing value in the skills is a starting point; tune it on your data and commit the values that work.
+Version 0.4.0 ([releases](https://github.com/jjmartres/astroagent/releases)), run end to end on real data twice: NGC 891 (broadband one-shot colour, 11.5 h) and SH2-112 (dual-band D1/D2 on a one-shot colour camera, HOO, 11.8 h). See `CHANGELOG.md`. To cut a release, bump the version in `.claude-plugin/plugin.json` and add its section to `CHANGELOG.md`: on the push to `main`, `.github/workflows/release.yml` creates the `vX.Y.Z` tag and the GitHub release from the CHANGELOG, and moves the `latest` tag. It can also be run by hand from the Actions tab. Every processing value in the skills is a starting point; tune it on your data and commit the values that work.
 
 ## Credits
 
