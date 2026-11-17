@@ -139,6 +139,10 @@ printf '%s\\n' 'ASTROAGENT_NEBULIS_URL=http://your-server:3001' 'ASTROAGENT_NEBU
 chmod 600 ~/.config/astroagent/env"""
 
 
+# Final images of real runs, in site/results/ (the web JPEG of each run, 2048 px wide)
+RESULTS = [("NGC891_RGB_2026-11-15.jpg", 2048, 1088), ("SH2-112_HOO_2026-11-16.jpg", 2048, 1132)]
+
+
 def page(lang):
     t = LANGS[lang]
     u = USAGE[lang]
@@ -159,6 +163,14 @@ def page(lang):
     know = "".join(f'<li><h4>{esc(t[f"f{i}"])}</h4><p>{esc(t[f"f{i}d"])}</p></li>' for i in (1, 2, 3, 7))
     loop = "".join(f'<li><span class="step">{i}</span><h3>{esc(t[f"l{i}"])}</h3><p>{esc(t[f"l{i}d"])}</p></li>' for i in range(1, 4))
     chat = render_session(u)
+    results = "".join(
+        f'<article class="result"><a class="shot" href="{pre}results/{img}" aria-label="{esc(t[f"r{i}_title"])}: {esc(t["r_open"])}">'
+        f'<img src="{pre}results/{img}" width="{w}" height="{h}" loading="lazy" alt="{esc(t[f"r{i}_title"])}"></a>'
+        f'<div class="result-body"><h3>{esc(t[f"r{i}_title"])}</h3>'
+        f'<ul class="facts">{"".join(f"<li>{esc(m)}</li>" for m in t[f"r{i}_meta"])}</ul>'
+        f'<ul class="points">{"".join(f"<li>{esc(m)}</li>" for m in t[f"r{i}_points"])}</ul>'
+        f'<a class="open" href="{pre}results/{img}">{esc(t["r_open"])} ↗</a></div></article>'
+        for i, (img, w, h) in enumerate(RESULTS, 1))
     tips = "".join(f'<li><h4>{esc(h)}</h4><p>{esc(p)}</p></li>' for h, p in u["tips"])
     reqs = "".join(f"<li>{esc(r)}</li>" for r in t["rq"])
     pi_steps = "".join(f"<li>{pi_markup(s)}</li>" for s in t["in4_steps"])
@@ -200,6 +212,7 @@ def page(lang):
       <a href="#gains">{esc(t["nav_gains"])}</a>
       <a href="#how">{esc(t["nav_how"])}</a>
       <a href="#install">{esc(t["nav_install"])}</a>
+      <a href="#results">{esc(t["nav_results"])}</a>
     </nav>
     <div class="tools">
       <div class="langs" role="group" aria-label="{esc(t["lang_switch"])}">{switch}</div>
@@ -279,6 +292,12 @@ def page(lang):
   <div class="wrap">
     <p class="eyebrow">{esc(t["in_lead"])}</p>
     <h2>{esc(t["in_title"])}</h2>
+    <p class="sub">{esc(t["in_prompt_lead"])}</p>
+    <div class="code prompt"><div class="prompt-bar"><span>&gt;_ prompt</span>
+      <button type="button" class="copy" data-copied="{esc(t["copied"])}">{esc(t["copy"])}</button></div>
+      <pre><code>{esc(t["in_prompt"])}</code></pre></div>
+    <p class="small prompt-note">{esc(t["in_prompt_note"])}</p>
+    <details class="manual"><summary>{esc(t["in_manual"])}</summary>
     <ol class="steps">
       <li><span class="step">1</span><div><h3>{esc(t["in1"])}</h3>{code_block(t, INSTALL1)}</div></li>
       <li><span class="step">2</span><div><h3>{esc(t["in2"])}</h3>{code_block(t, INSTALL2)}<p class="small">{esc(t["in_alt"])}</p>{code_block(t, INSTALL2B)}</div></li>
@@ -287,10 +306,20 @@ def page(lang):
       <li class="opt"><span class="step">4</span><div><h3>{esc(t["in4"])}</h3><p class="small">{esc(t["in4_lead"])}</p>
         <ol class="sub-steps">{pi_steps}</ol></div></li>
     </ol>
+    </details>
     <div class="reqs">
       <h3 class="minor">{esc(t["rq_title"])} <a class="badge" href="{REPO}/releases/latest">{esc(t["ver"])} {esc(t["st"])}</a></h3>
       <ul>{reqs}</ul>
     </div>
+  </div>
+</section>
+
+<section id="results" class="block alt">
+  <div class="wrap">
+    <p class="eyebrow">{esc(t["r_eyebrow"])}</p>
+    <h2>{esc(t["r_title"])}</h2>
+    <p class="sub">{esc(t["r_lead"])}</p>
+    <div class="results">{results}</div>
   </div>
 </section>
 </main>
@@ -317,6 +346,7 @@ def main():
     for f in (ROOT / "brand" / "icons").iterdir():
         shutil.copy(f, OUT / f.name)
     shutil.copytree(ROOT / "brand", OUT / "brand", ignore=shutil.ignore_patterns("icons"))
+    shutil.copytree(src / "results", OUT / "results")
     og = src / "og.png"
     if og.exists():
         shutil.copy(og, OUT / "og.png")

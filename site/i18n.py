@@ -415,3 +415,131 @@ F7 = {
 }
 for _lang, _texts in F7.items():
     LANGS[_lang].update(_texts)
+
+
+# Results: two campaigns processed with astroagent (figures from their PROCESSING.md)
+RES = {
+    "en": {
+        "nav_results": "Results",
+        "r_eyebrow": "Real runs",
+        "r_title": "Two campaigns processed with astroagent",
+        "r_lead": "My own data, shot from my backyard with an Askar 91F and a ZWO ASI585MC Air, one broadband and one dual-band. Every stage was measured, proposed and approved; the figures come from the processing logs.",
+        "r1_title": "NGC 891 · Silver Sliver Galaxy",
+        "r1_meta": ["RGB, broadband", "276 × 150 s", "11 h 30 min", "4 nights"],
+        "r1_points": ["WBPP had switched the 303-frame stack to FastIntegration on its own: the agent read the log and stacked again with full rejection and weights.",
+                      "A centre-bright flat residual and column bands, found by radial and column checks, removed on the linear starless image."],
+        "r2_title": "Sh2-112 · HOO",
+        "r2_meta": ["Askar D1 and D2, dual-band", "236 × 180 s", "11 h 48 min", "4 nights"],
+        "r2_points": ["79 subs left out before stacking, a whole hazy night among them (signal-to-noise 3.8 × lower than on clear nights).",
+                      "HOO, SHO and a Foraxx-style palette compared: SII at 14 % of Ha turned SHO blue-grey, so HOO was kept."],
+        "r_open": "Full size",
+    },
+    "fr": {
+        "nav_results": "Résultats",
+        "r_eyebrow": "Traitements réels",
+        "r_title": "Deux campagnes traitées avec astroagent",
+        "r_lead": "Mes propres données, prises depuis mon jardin avec une Askar 91F et une ZWO ASI585MC Air, l’une en large bande, l’autre en dual-band. Chaque étape a été mesurée, proposée et validée ; les chiffres viennent des journaux de traitement.",
+        "r1_title": "NGC 891 · Silver Sliver Galaxy",
+        "r1_meta": ["RGB, large bande", "276 × 150 s", "11 h 30 min", "4 nuits"],
+        "r1_points": ["WBPP était passé tout seul en FastIntegration sur la pile de 303 images : l’agent a lu le journal et relancé l’empilement avec réjection et pondération complètes.",
+                      "Un résidu de flat plus clair au centre et des bandes verticales, trouvés par des contrôles radiaux et par colonnes, corrigés sur l’image linéaire sans étoiles."],
+        "r2_title": "Sh2-112 · HOO",
+        "r2_meta": ["Askar D1 et D2, dual-band", "236 × 180 s", "11 h 48 min", "4 nuits"],
+        "r2_points": ["79 subs écartées avant l’empilement, dont une nuit voilée entière (rapport signal/bruit 3,8 × plus faible que les nuits claires).",
+                      "HOO, SHO et une palette type Foraxx comparées : avec un SII à 14 % du Ha, le SHO tirait vers le gris-bleu, le HOO a été retenu."],
+        "r_open": "Taille réelle",
+    },
+    "es": {
+        "nav_results": "Resultados",
+        "r_eyebrow": "Procesados reales",
+        "r_title": "Dos campañas procesadas con astroagent",
+        "r_lead": "Mis propios datos, tomados desde mi jardín con un Askar 91F y una ZWO ASI585MC Air, una en banda ancha y otra en banda dual. Cada etapa se midió, se propuso y se aprobó; las cifras salen de los registros de procesado.",
+        "r1_title": "NGC 891 · Silver Sliver Galaxy",
+        "r1_meta": ["RGB, banda ancha", "276 × 150 s", "11 h 30 min", "4 noches"],
+        "r1_points": ["WBPP había pasado por su cuenta la pila de 303 tomas a FastIntegration: el agente leyó el registro y volvió a apilar con rechazo y pesos completos.",
+                      "Un residuo de flat más claro en el centro y bandas verticales, detectados con controles radiales y por columnas, corregidos en la imagen lineal sin estrellas."],
+        "r2_title": "Sh2-112 · HOO",
+        "r2_meta": ["Askar D1 y D2, banda dual", "236 × 180 s", "11 h 48 min", "4 noches"],
+        "r2_points": ["79 tomas descartadas antes de apilar, entre ellas una noche entera con velo (relación señal/ruido 3,8 × menor que en las noches despejadas).",
+                      "HOO, SHO y una paleta tipo Foraxx comparadas: con el SII al 14 % del Ha, el SHO quedaba gris azulado, así que se mantuvo HOO."],
+        "r_open": "Tamaño completo",
+    },
+    "it": {
+        "nav_results": "Risultati",
+        "r_eyebrow": "Elaborazioni reali",
+        "r_title": "Due campagne elaborate con astroagent",
+        "r_lead": "I miei dati, ripresi dal mio giardino con un Askar 91F e una ZWO ASI585MC Air, una a banda larga e una dual-band. Ogni fase è stata misurata, proposta e approvata; i numeri vengono dai log di elaborazione.",
+        "r1_title": "NGC 891 · Silver Sliver Galaxy",
+        "r1_meta": ["RGB, banda larga", "276 × 150 s", "11 h 30 min", "4 notti"],
+        "r1_points": ["WBPP aveva portato da solo lo stack di 303 pose in FastIntegration: l’agente ha letto il log e rifatto lo stack con reiezione e pesi completi.",
+                      "Un residuo di flat più chiaro al centro e bande verticali, trovati con controlli radiali e per colonne, corretti sull’immagine lineare senza stelle."],
+        "r2_title": "Sh2-112 · HOO",
+        "r2_meta": ["Askar D1 e D2, dual-band", "236 × 180 s", "11 h 48 min", "4 notti"],
+        "r2_points": ["79 pose escluse prima dello stack, tra cui un’intera notte velata (rapporto segnale/rumore 3,8 × più basso delle notti limpide).",
+                      "HOO, SHO e una palette tipo Foraxx a confronto: con l’SII al 14 % dell’Ha l’SHO virava al grigio-azzurro, quindi è rimasto HOO."],
+        "r_open": "Dimensione piena",
+    },
+}
+for _lang, _texts in RES.items():
+    LANGS[_lang].update(_texts)
+
+
+# Install: one prompt to paste into the agent; the manual steps stay below it
+_CMD = {
+    "npm": "npm install -g pixinsight-connector@2.5.2",
+    "mcp": "claude mcp add -s user pixinsight -- pixinsight-connector",
+    "doctor": "pixinsight-connector doctor",
+    "mkt": "claude plugin marketplace add https://github.com/jjmartres/astroagent.git#latest",
+    "plugin": "claude plugin install astroagent@astroagent",
+}
+INST = {
+    "en": {
+        "in_prompt_lead": "Paste this prompt into Claude Code, or any coding agent, on the computer that runs PixInsight (macOS, Windows or Linux). It installs everything and asks you only for your Nebulis address.",
+        "in_prompt": f"""Install astroagent (https://github.com/jjmartres/astroagent) on this computer, the one that runs PixInsight.
+
+1. PixInsight connector: `{_CMD["npm"]}`, then `{_CMD["mcp"]}`, and check it with `{_CMD["doctor"]}`.
+2. Skills: `{_CMD["mkt"]}`, then `{_CMD["plugin"]}`. If you are not Claude Code, clone the repository at the `latest` tag and run its `install.sh` instead.
+3. Nebulis: ask me for my server address, as I open it in a browser. Write `~/.config/astroagent/env` with `ASTROAGENT_NEBULIS_URL=<that address>` and `ASTROAGENT_NEBULIS_API_KEY=paste-your-key-here`, readable by me only (`chmod 600` on macOS and Linux). Do not ask for the key in this chat: tell me to paste it into that file myself, from Nebulis, Settings → Account → API keys → New key (admin, to record reviews and upload results).
+4. Once I have pasted the key, run the `status` command of the nebulis skill's `nebulis.py`, tell me what failed if anything, and remind me to restart the agent.""",
+        "in_prompt_note": "Your API key never goes through the chat: you paste it into the file yourself.",
+        "in_manual": "Prefer to install by hand?",
+    },
+    "fr": {
+        "in_prompt_lead": "Collez ce prompt dans Claude Code, ou tout autre agent de code, sur l'ordinateur qui fait tourner PixInsight (macOS, Windows ou Linux). Il installe tout et ne vous demande que l'adresse de votre serveur Nebulis.",
+        "in_prompt": f"""Installe astroagent (https://github.com/jjmartres/astroagent) sur cet ordinateur, celui qui fait tourner PixInsight.
+
+1. Connecteur PixInsight : `{_CMD["npm"]}`, puis `{_CMD["mcp"]}`, et vérifie avec `{_CMD["doctor"]}`.
+2. Skills : `{_CMD["mkt"]}`, puis `{_CMD["plugin"]}`. Si tu n'es pas Claude Code, clone le dépôt au tag `latest` et lance plutôt son `install.sh`.
+3. Nebulis : demande-moi l'adresse de mon serveur, telle que je l'ouvre dans un navigateur. Écris `~/.config/astroagent/env` avec `ASTROAGENT_NEBULIS_URL=<cette adresse>` et `ASTROAGENT_NEBULIS_API_KEY=paste-your-key-here`, lisible par moi seul (`chmod 600` sous macOS et Linux). Ne me demande pas la clé dans cette conversation : dis-moi de la coller moi-même dans ce fichier, depuis Nebulis, Settings → Account → API keys → New key (admin, pour enregistrer les revues et renvoyer les résultats).
+4. Une fois la clé collée, lance la commande `status` du `nebulis.py` du skill nebulis, dis-moi ce qui a échoué s'il y a lieu, et rappelle-moi de redémarrer l'agent.""",
+        "in_prompt_note": "Votre clé API ne passe jamais par la conversation : vous la collez vous-même dans le fichier.",
+        "in_manual": "Vous préférez installer à la main ?",
+    },
+    "es": {
+        "in_prompt_lead": "Pega este prompt en Claude Code, o en cualquier agente de código, en el ordenador que ejecuta PixInsight (macOS, Windows o Linux). Lo instala todo y solo te pide la dirección de tu servidor Nebulis.",
+        "in_prompt": f"""Instala astroagent (https://github.com/jjmartres/astroagent) en este ordenador, el que ejecuta PixInsight.
+
+1. Conector de PixInsight: `{_CMD["npm"]}`, luego `{_CMD["mcp"]}`, y compruébalo con `{_CMD["doctor"]}`.
+2. Skills: `{_CMD["mkt"]}`, luego `{_CMD["plugin"]}`. Si no eres Claude Code, clona el repositorio en la etiqueta `latest` y ejecuta su `install.sh` en su lugar.
+3. Nebulis: pídeme la dirección de mi servidor, tal como la abro en el navegador. Escribe `~/.config/astroagent/env` con `ASTROAGENT_NEBULIS_URL=<esa dirección>` y `ASTROAGENT_NEBULIS_API_KEY=paste-your-key-here`, legible solo por mí (`chmod 600` en macOS y Linux). No me pidas la clave en este chat: dime que la pegue yo mismo en ese archivo, desde Nebulis, Settings → Account → API keys → New key (de administrador, para guardar revisiones y subir resultados).
+4. Cuando haya pegado la clave, ejecuta el comando `status` del `nebulis.py` del skill nebulis, dime qué ha fallado si algo falló y recuérdame reiniciar el agente.""",
+        "in_prompt_note": "Tu clave API nunca pasa por el chat: la pegas tú mismo en el archivo.",
+        "in_manual": "¿Prefieres instalarlo a mano?",
+    },
+    "it": {
+        "in_prompt_lead": "Incolla questo prompt in Claude Code, o in qualsiasi agente di codice, sul computer che esegue PixInsight (macOS, Windows o Linux). Installa tutto e ti chiede solo l'indirizzo del tuo server Nebulis.",
+        "in_prompt": f"""Installa astroagent (https://github.com/jjmartres/astroagent) su questo computer, quello che esegue PixInsight.
+
+1. Connettore PixInsight: `{_CMD["npm"]}`, poi `{_CMD["mcp"]}`, e verificalo con `{_CMD["doctor"]}`.
+2. Skill: `{_CMD["mkt"]}`, poi `{_CMD["plugin"]}`. Se non sei Claude Code, clona il repository al tag `latest` ed esegui invece il suo `install.sh`.
+3. Nebulis: chiedimi l'indirizzo del mio server, come lo apro nel browser. Scrivi `~/.config/astroagent/env` con `ASTROAGENT_NEBULIS_URL=<quell'indirizzo>` e `ASTROAGENT_NEBULIS_API_KEY=paste-your-key-here`, leggibile solo da me (`chmod 600` su macOS e Linux). Non chiedermi la chiave in questa chat: dimmi di incollarla io stesso in quel file, da Nebulis, Settings → Account → API keys → New key (di amministratore, per salvare le revisioni e caricare i risultati).
+4. Quando ho incollato la chiave, esegui il comando `status` del `nebulis.py` della skill nebulis, dimmi cosa è fallito se qualcosa non va e ricordami di riavviare l'agente.""",
+        "in_prompt_note": "La tua chiave API non passa mai dalla chat: la incolli tu nel file.",
+        "in_manual": "Preferisci installare a mano?",
+    },
+}
+for _lang, _texts in INST.items():
+    LANGS[_lang].update(_texts)
+for _lang, _lead in {"en": "One prompt, on the computer that runs PixInsight", "fr": "Un prompt, sur l'ordinateur qui fait tourner PixInsight",
+                     "es": "Un prompt, en el ordenador que ejecuta PixInsight", "it": "Un prompt, sul computer che esegue PixInsight"}.items():
+    LANGS[_lang]["in_lead"] = _lead
