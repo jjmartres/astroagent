@@ -35,14 +35,41 @@ flowchart TD
     gate{{"Every stage: numbers, proposal, preview → your approval"}}
 ```
 
+## Results
+
+Two campaigns processed with astroagent, from my own data shot from my backyard with the setup above. Every stage was measured, proposed and approved; the figures come from the processing logs.
+
+| NGC 891 · Silver Sliver Galaxy | Sh2-112 · HOO |
+|---|---|
+| [![NGC 891, RGB](site/results/NGC891_RGB_2026-11-15.jpg)](site/results/NGC891_RGB_2026-11-15.jpg) | [![Sh2-112, HOO](site/results/SH2-112_HOO_2026-11-16.jpg)](site/results/SH2-112_HOO_2026-11-16.jpg) |
+| RGB, broadband · 276 × 150 s · 11 h 30 min · 4 nights | Askar D1 and D2, dual-band · 236 × 180 s · 11 h 48 min · 4 nights |
+| WBPP had switched the 303-frame stack to FastIntegration on its own: the agent read the log and stacked again with full rejection and weights. A centre-bright flat residual and column bands, found by radial and column checks, were removed on the linear starless image. | 79 subs left out before stacking, a whole hazy night among them (signal-to-noise 3.8 × lower than on clear nights). HOO, SHO and a Foraxx-style palette compared: SII at 14 % of Ha turned SHO blue-grey, so HOO was kept. |
+
 ## Requirements
 
-- macOS (tested target), PixInsight 1.9.5 or later, with BlurXTerminator, NoiseXTerminator and StarXTerminator; GHS optional.
+- macOS (tested; Windows and Linux untested), PixInsight 1.9.5 or later, with BlurXTerminator, NoiseXTerminator and StarXTerminator; GHS optional.
 - Node.js 22 or later (for the connector), Python 3.9 or later (for `nebulis.py`, standard library only).
 - A Nebulis server and an API key from **Settings → Account → API keys → New key**. An **admin** key is needed to record keep/reject decisions and to upload results; a viewer key is read-only.
 - Claude Code or OpenCode.
 
 ## Install
+
+### One prompt
+
+Paste this into Claude Code, or any coding agent, on the computer that runs PixInsight. It runs the steps below and asks you only for your Nebulis address:
+
+```text
+Install astroagent (https://github.com/jjmartres/astroagent) on this computer, the one that runs PixInsight.
+
+1. PixInsight connector: `npm install -g pixinsight-connector@2.5.2`, then `claude mcp add -s user pixinsight -- pixinsight-connector`, and check it with `pixinsight-connector doctor`.
+2. Skills: `claude plugin marketplace add https://github.com/jjmartres/astroagent.git#latest`, then `claude plugin install astroagent@astroagent`. If you are not Claude Code, clone the repository at the `latest` tag and run its `install.sh` instead.
+3. Nebulis: ask me for my server address, as I open it in a browser. Write `~/.config/astroagent/env` with `ASTROAGENT_NEBULIS_URL=<that address>` and `ASTROAGENT_NEBULIS_API_KEY=paste-your-key-here`, readable by me only (`chmod 600` on macOS and Linux). Do not ask for the key in this chat: tell me to paste it into that file myself, from Nebulis, Settings → Account → API keys → New key (admin, to record reviews and upload results).
+4. Once I have pasted the key, run the `status` command of the nebulis skill's `nebulis.py`, tell me what failed if anything, and remind me to restart the agent.
+```
+
+Your API key never goes through the chat: you paste it into `~/.config/astroagent/env` yourself.
+
+To install by hand instead, follow steps 1 to 3; steps 4 to 6 apply either way.
 
 ### 1. The PixInsight connector
 
