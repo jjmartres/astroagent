@@ -422,8 +422,8 @@ RES = {
     "en": {
         "nav_results": "Results",
         "r_eyebrow": "Real runs",
-        "r_title": "Two campaigns processed with astroagent",
-        "r_lead": "My own data, shot from my backyard with an Askar 91F and a ZWO ASI585MC Air, one broadband and one dual-band. Every stage was measured, proposed and approved; the figures come from the processing logs.",
+        "r_title": "Four campaigns processed with astroagent",
+        "r_lead": "Two from my own backyard in the French Alps, one broadband and one dual-band, and two from Telescope.live remote data. Every stage was measured, proposed, approved and run in PixInsight; the figures come from the processing logs. Tokens count everything the agent read and wrote over the session, about 99 % of it re-read from the prompt cache.",
         "r1_title": "NGC 891 · Silver Sliver Galaxy",
         "r1_meta": ["RGB, broadband", "276 × 150 s", "11 h 30 min", "4 nights"],
         "r1_points": ["WBPP had switched the 303-frame stack to FastIntegration on its own: the agent read the log and stacked again with full rejection and weights.",
@@ -437,8 +437,8 @@ RES = {
     "fr": {
         "nav_results": "Résultats",
         "r_eyebrow": "Traitements réels",
-        "r_title": "Deux campagnes traitées avec astroagent",
-        "r_lead": "Mes propres données, prises depuis mon jardin avec une Askar 91F et une ZWO ASI585MC Air, l’une en large bande, l’autre en dual-band. Chaque étape a été mesurée, proposée et validée ; les chiffres viennent des journaux de traitement.",
+        "r_title": "Quatre campagnes traitées avec astroagent",
+        "r_lead": "Deux depuis mon jardin dans les Alpes françaises, l’une en large bande, l’autre en dual-band, et deux à partir de données distantes Telescope.live. Chaque étape a été mesurée, proposée, validée et exécutée dans PixInsight ; les chiffres viennent des journaux de traitement. Les tokens comptent tout ce que l’agent a lu et écrit pendant la session, dont environ 99 % relus depuis le cache de prompt.",
         "r1_title": "NGC 891 · Silver Sliver Galaxy",
         "r1_meta": ["RGB, large bande", "276 × 150 s", "11 h 30 min", "4 nuits"],
         "r1_points": ["WBPP était passé tout seul en FastIntegration sur la pile de 303 images : l’agent a lu le journal et relancé l’empilement avec réjection et pondération complètes.",
@@ -452,8 +452,8 @@ RES = {
     "es": {
         "nav_results": "Resultados",
         "r_eyebrow": "Procesados reales",
-        "r_title": "Dos campañas procesadas con astroagent",
-        "r_lead": "Mis propios datos, tomados desde mi jardín con un Askar 91F y una ZWO ASI585MC Air, una en banda ancha y otra en banda dual. Cada etapa se midió, se propuso y se aprobó; las cifras salen de los registros de procesado.",
+        "r_title": "Cuatro campañas procesadas con astroagent",
+        "r_lead": "Dos desde mi jardín en los Alpes franceses, una en banda ancha y otra en banda dual, y dos con datos remotos de Telescope.live. Cada etapa se midió, se propuso, se aprobó y se ejecutó en PixInsight; las cifras salen de los registros de procesado. Los tokens cuentan todo lo que el agente leyó y escribió durante la sesión, cerca del 99 % releído desde la caché de prompt.",
         "r1_title": "NGC 891 · Silver Sliver Galaxy",
         "r1_meta": ["RGB, banda ancha", "276 × 150 s", "11 h 30 min", "4 noches"],
         "r1_points": ["WBPP había pasado por su cuenta la pila de 303 tomas a FastIntegration: el agente leyó el registro y volvió a apilar con rechazo y pesos completos.",
@@ -467,8 +467,8 @@ RES = {
     "it": {
         "nav_results": "Risultati",
         "r_eyebrow": "Elaborazioni reali",
-        "r_title": "Due campagne elaborate con astroagent",
-        "r_lead": "I miei dati, ripresi dal mio giardino con un Askar 91F e una ZWO ASI585MC Air, una a banda larga e una dual-band. Ogni fase è stata misurata, proposta e approvata; i numeri vengono dai log di elaborazione.",
+        "r_title": "Quattro campagne elaborate con astroagent",
+        "r_lead": "Due dal mio giardino nelle Alpi francesi, una a banda larga e una dual-band, e due da dati remoti di Telescope.live. Ogni fase è stata misurata, proposta, approvata ed eseguita in PixInsight; i numeri vengono dai log di elaborazione. I token contano tutto ciò che l’agente ha letto e scritto durante la sessione, per circa il 99 % riletto dalla cache del prompt.",
         "r1_title": "NGC 891 · Silver Sliver Galaxy",
         "r1_meta": ["RGB, banda larga", "276 × 150 s", "11 h 30 min", "4 notti"],
         "r1_points": ["WBPP aveva portato da solo lo stack di 303 pose in FastIntegration: l’agente ha letto il log e rifatto lo stack con reiezione e pesi completi.",
@@ -481,6 +481,108 @@ RES = {
     },
 }
 for _lang, _texts in RES.items():
+    LANGS[_lang].update(_texts)
+
+
+# Results, third and fourth runs (M16 and NGC 3521, Telescope.live data), per-run specs, and the AI-assisted note in the hero.
+# Tokens: input, cache and output tokens summed over the whole processing session.
+_HOME = "Askar 91F · ZWO ASI585MC Air"
+_TL = "Planewave CDK24 · FLI PL9000 (Telescope.live CHI-1)"
+_TL4 = "Planewave CDK24 · QHY 600M (Telescope.live CHI‑1‑CMOS)"
+RUNS = {
+    "en": {
+        "ai_note_h": "AI-assisted, not AI-processed.",
+        "ai_note": "The language model never touches your image: it measures, proposes and waits for your go. Every operation runs in PixInsight, as a PixInsight process or a plug-in installed in it, and is saved as process icons you can reload.",
+        "r_spec": ["Telescope", "Site", "Data", "Tokens"],
+        "r1_specs": [_HOME, "French Alps, backyard", "My own rig", "286 M, 355 k generated"],
+        "r2_specs": [_HOME, "French Alps, backyard", "My own rig", "124 M, 179 k generated"],
+        "r3_specs": [_TL, "El Sauce Observatory, Chile", "Telescope.live, pre-calibrated by the provider", "63 M, 196 k generated"],
+        "r3_badge": "Telescope.live data",
+        "r3_title": "M16 · Eagle Nebula",
+        "r3_meta": ["SHO and HOO, narrowband mono", "145 × 600 s", "24 h 10 min", "37 nights, 2020–2022"],
+        "r3_points": ["Lights already calibrated by Telescope.live.",
+                      "Three years of sky backgrounds made the sky level multi-modal: rejection was relaxed on that one measure, the others kept at z = 3, and 145 of 164 subs stacked.",
+                      "The default gradient model followed the nebula and took 2–3 % of the Pillars’ signal: a plane fit on OIII and SII instead, Ha left untouched."],
+        "r4_specs": [_TL4, "El Sauce Observatory, Chile", "Telescope.live, pre-calibrated by the provider", "71 M, 142 k generated"],
+        "r4_badge": "Telescope.live data",
+        "r4_title": "NGC 3521 · Bubble Galaxy",
+        "r4_meta": ["LRGB, broadband mono", "187 × 300 s", "15 h 35 min", "15 nights, 2024–2025"],
+        "r4_points": ["Lights already calibrated by Telescope.live.",
+                      "The local Gaia catalogue held too few stars with spectra in this field for spectrophotometric colour: the agent measured the gap (8 % of the expected sources) and calibrated colour on the galaxy itself.",
+                      "Supernova SN 2024aecx shines in the frames of December 2024 and January 2025: it was kept in the stack."],
+        "r_alt": "HOO version",
+    },
+    "fr": {
+        "ai_note_h": "Un traitement assisté par IA, pas un traitement par IA.",
+        "ai_note": "Le modèle de langage ne touche jamais votre image : il mesure, propose et attend votre accord. Chaque opération s’exécute dans PixInsight, avec un process PixInsight ou un module installé dans PixInsight, et est enregistrée en icônes de process que vous pouvez recharger.",
+        "r_spec": ["Instrument", "Lieu", "Données", "Tokens"],
+        "r1_specs": [_HOME, "Alpes françaises, jardin", "Mon setup", "286 M, dont 355 k générés"],
+        "r2_specs": [_HOME, "Alpes françaises, jardin", "Mon setup", "124 M, dont 179 k générés"],
+        "r3_specs": [_TL, "Observatoire d’El Sauce, Chili", "Telescope.live, précalibrées par le fournisseur", "63 M, dont 196 k générés"],
+        "r3_badge": "Données Telescope.live",
+        "r3_title": "M16 · Nébuleuse de l’Aigle",
+        "r3_meta": ["SHO et HOO, bande étroite mono", "145 × 600 s", "24 h 10 min", "37 nuits, 2020–2022"],
+        "r3_points": ["Images déjà calibrées par Telescope.live.",
+                      "Trois ans de fonds de ciel rendaient le niveau du ciel multimodal : réjection assouplie sur cette seule mesure, les autres gardées à z = 3, et 145 subs empilées sur 164.",
+                      "Le modèle de gradient par défaut suivait la nébuleuse et retirait 2 à 3 % du signal des Piliers : un simple plan soustrait sur OIII et SII, Ha inchangé."],
+        "r4_specs": [_TL4, "Observatoire d’El Sauce, Chili", "Telescope.live, précalibrées par le fournisseur", "71 M, dont 142 k générés"],
+        "r4_badge": "Données Telescope.live",
+        "r4_title": "NGC 3521 · Galaxie de la Bulle",
+        "r4_meta": ["LRGB, large bande mono", "187 × 300 s", "15 h 35 min", "15 nuits, 2024–2025"],
+        "r4_points": ["Images déjà calibrées par Telescope.live.",
+                      "Le catalogue Gaia local contenait trop peu d’étoiles avec spectre dans ce champ pour une couleur spectrophotométrique : l’agent a mesuré le manque (8 % des sources attendues) et calibré la couleur sur la galaxie elle-même.",
+                      "La supernova SN 2024aecx brille dans les images de décembre 2024 et janvier 2025 : elle a été gardée dans l’empilement."],
+        "r_alt": "Version HOO",
+    },
+    "es": {
+        "ai_note_h": "Procesado asistido por IA, no procesado por IA.",
+        "ai_note": "El modelo de lenguaje nunca toca tu imagen: mide, propone y espera tu visto bueno. Cada operación se ejecuta en PixInsight, con un proceso de PixInsight o un módulo instalado en él, y se guarda como iconos de proceso que puedes volver a cargar.",
+        "r_spec": ["Telescopio", "Lugar", "Datos", "Tokens"],
+        "r1_specs": [_HOME, "Alpes franceses, jardín", "Mi equipo", "286 M, 355 k generados"],
+        "r2_specs": [_HOME, "Alpes franceses, jardín", "Mi equipo", "124 M, 179 k generados"],
+        "r3_specs": [_TL, "Observatorio El Sauce, Chile", "Telescope.live, precalibrados por el proveedor", "63 M, 196 k generados"],
+        "r3_badge": "Datos de Telescope.live",
+        "r3_title": "M16 · Nebulosa del Águila",
+        "r3_meta": ["SHO y HOO, banda estrecha mono", "145 × 600 s", "24 h 10 min", "37 noches, 2020–2022"],
+        "r3_points": ["Tomas ya calibradas por Telescope.live.",
+                      "Tres años de fondos de cielo volvían multimodal el nivel del cielo: rechazo relajado solo en esa medida, las demás a z = 3, y 145 de 164 tomas apiladas.",
+                      "El modelo de gradiente por defecto seguía la nebulosa y quitaba un 2–3 % de la señal de los Pilares: un plano restado en OIII y SII, Ha intacto."],
+        "r4_specs": [_TL4, "Observatorio El Sauce, Chile", "Telescope.live, precalibrados por el proveedor", "71 M, 142 k generados"],
+        "r4_badge": "Datos de Telescope.live",
+        "r4_title": "NGC 3521 · Galaxia de la Burbuja",
+        "r4_meta": ["LRGB, banda ancha mono", "187 × 300 s", "15 h 35 min", "15 noches, 2024–2025"],
+        "r4_points": ["Tomas ya calibradas por Telescope.live.",
+                      "El catálogo Gaia local tenía muy pocas estrellas con espectro en este campo para un color espectrofotométrico: el agente midió la carencia (8 % de las fuentes esperadas) y calibró el color sobre la propia galaxia.",
+                      "La supernova SN 2024aecx brilla en las tomas de diciembre de 2024 y enero de 2025: se mantuvo en el apilado."],
+        "r_alt": "Versión HOO",
+    },
+    "it": {
+        "ai_note_h": "Elaborazione assistita dall’IA, non elaborazione con l’IA.",
+        "ai_note": "Il modello linguistico non tocca mai la tua immagine: misura, propone e aspetta il tuo via libera. Ogni operazione gira in PixInsight, con un processo di PixInsight o un modulo installato in esso, ed è salvata come icone di processo da ricaricare.",
+        "r_spec": ["Telescopio", "Luogo", "Dati", "Token"],
+        "r1_specs": [_HOME, "Alpi francesi, giardino", "Il mio setup", "286 M, 355 k generati"],
+        "r2_specs": [_HOME, "Alpi francesi, giardino", "Il mio setup", "124 M, 179 k generati"],
+        "r3_specs": [_TL, "Osservatorio El Sauce, Cile", "Telescope.live, precalibrati dal fornitore", "63 M, 196 k generati"],
+        "r3_badge": "Dati Telescope.live",
+        "r3_title": "M16 · Nebulosa Aquila",
+        "r3_meta": ["SHO e HOO, banda stretta mono", "145 × 600 s", "24 h 10 min", "37 notti, 2020–2022"],
+        "r3_points": ["Pose già calibrate da Telescope.live.",
+                      "Tre anni di fondi cielo rendevano multimodale il livello del cielo: reiezione allentata solo su quella misura, le altre a z = 3, e 145 pose impilate su 164.",
+                      "Il modello di gradiente predefinito seguiva la nebulosa e toglieva il 2–3 % del segnale dei Pilastri: un piano sottratto su OIII e SII, Ha intatto."],
+        "r4_specs": [_TL4, "Osservatorio El Sauce, Cile", "Telescope.live, precalibrati dal fornitore", "71 M, 142 k generati"],
+        "r4_badge": "Dati Telescope.live",
+        "r4_title": "NGC 3521 · Galassia Bolla",
+        "r4_meta": ["LRGB, banda larga mono", "187 × 300 s", "15 h 35 min", "15 notti, 2024–2025"],
+        "r4_points": ["Pose già calibrate da Telescope.live.",
+                      "Il catalogo Gaia locale aveva troppe poche stelle con spettro in questo campo per un colore spettrofotometrico: l’agente ha misurato la lacuna (8 % delle sorgenti attese) e calibrato il colore sulla galassia stessa.",
+                      "La supernova SN 2024aecx brilla nelle pose di dicembre 2024 e gennaio 2025: è stata tenuta nell’integrazione."],
+        "r_alt": "Versione HOO",
+    },
+}
+for _lang, _texts in RUNS.items():
+    for _k, _v in _texts.items():  # non-breaking space before units and signs in the figures
+        if isinstance(_v, list):
+            _texts[_k] = [_x.replace(" M,", " M,").replace(" k ", " k ").replace(" × ", " × ").replace(" %", " %").replace("z = ", "z = ") for _x in _v]
     LANGS[_lang].update(_texts)
 
 
