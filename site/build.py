@@ -72,11 +72,12 @@ def render_session(u):
 
 
 NEBULIS_URL = "https://nebulis.app/"
+TELESCOPE_LIVE_URL = "https://telescope.live/"
 SKIP = ("a", "b", "pre", "code", "script", "style", "button", "svg", "title", "textarea")
 
 
 def link_nebulis(html):
-    """Link every visible mention of Nebulis, except inside links, code, the terminal mock-up and the head."""
+    """Link every visible mention of Nebulis and Telescope.live, except inside links, code, the terminal mock-up and the head."""
     head, sep, body = html.partition("<body")
     parts = re.split(r"(<[^>]+>)", body)
     depth, in_cc = 0, False
@@ -91,8 +92,12 @@ def link_nebulis(html):
                 in_cc = False
             elif tag in SKIP and not part.endswith("/>"):
                 depth += -1 if closing else 1
-        elif depth == 0 and not in_cc and "Nebulis" in part and i > 0:
-            parts[i] = re.sub(r"\bNebulis\b(?! Connector)", f'<a class="ext" href="{NEBULIS_URL}">Nebulis</a>', part)
+        elif depth == 0 and not in_cc and i > 0:
+            if "Nebulis" in part:
+                part = re.sub(r"\bNebulis\b(?! Connector)", f'<a class="ext" href="{NEBULIS_URL}">Nebulis</a>', part)
+            if "Telescope.live" in part:
+                part = part.replace("Telescope.live", f'<a class="ext" href="{TELESCOPE_LIVE_URL}">Telescope.live</a>')
+            parts[i] = part
     return head + sep + "".join(parts)
 
 
@@ -140,7 +145,9 @@ chmod 600 ~/.config/astroagent/env"""
 
 
 # Final images of real runs, in site/results/ (the web JPEG of each run, 2048 px wide)
-RESULTS = [("NGC891_RGB_2026-11-15.jpg", 2048, 1088), ("SH2-112_HOO_2026-11-16.jpg", 2048, 1132)]
+# (image, width, height, second version or None); a run with a second version spans the row
+RESULTS = [("NGC891_RGB_2026-11-15.jpg", 2048, 1088, None), ("SH2-112_HOO_2026-11-16.jpg", 2048, 1132, None),
+           ("M16_SHO_2026-11-17.jpg", 2048, 1991, "M16_HOO_2026-11-17.jpg"), ("NGC3521_LRGB_2026-11-18.jpg", 2048, 1355, None)]
 
 
 def page(lang):
@@ -163,14 +170,21 @@ def page(lang):
     know = "".join(f'<li><h4>{esc(t[f"f{i}"])}</h4><p>{esc(t[f"f{i}d"])}</p></li>' for i in (1, 2, 3, 7))
     loop = "".join(f'<li><span class="step">{i}</span><h3>{esc(t[f"l{i}"])}</h3><p>{esc(t[f"l{i}d"])}</p></li>' for i in range(1, 4))
     chat = render_session(u)
-    results = "".join(
-        f'<article class="result"><a class="shot" href="{pre}results/{img}" aria-label="{esc(t[f"r{i}_title"])}: {esc(t["r_open"])}">'
-        f'<img src="{pre}results/{img}" width="{w}" height="{h}" loading="lazy" alt="{esc(t[f"r{i}_title"])}"></a>'
-        f'<div class="result-body"><h3>{esc(t[f"r{i}_title"])}</h3>'
-        f'<ul class="facts">{"".join(f"<li>{esc(m)}</li>" for m in t[f"r{i}_meta"])}</ul>'
-        f'<ul class="points">{"".join(f"<li>{esc(m)}</li>" for m in t[f"r{i}_points"])}</ul>'
-        f'<a class="open" href="{pre}results/{img}">{esc(t["r_open"])} ↗</a></div></article>'
-        for i, (img, w, h) in enumerate(RESULTS, 1))
+    def result(i, img, w, h, alt):
+        k = f"r{i}"
+        badge = f'<span class="source">{esc(t[k + "_badge"])}</span>' if k + "_badge" in t else ""
+        specs = "".join(f"<div><dt>{esc(a)}</dt><dd>{esc(b)}</dd></div>" for a, b in zip(t["r_spec"], t[k + "_specs"]))
+        links = f'<a href="{pre}results/{img}">{esc(t["r_open"])} ↗</a>'
+        if alt:
+            links += f'<a href="{pre}results/{alt}">{esc(t["r_alt"])} ↗</a>'
+        return (f'<article class="result"><a class="shot" href="{pre}results/{img}" aria-label="{esc(t[k + "_title"])}: {esc(t["r_open"])}">'
+                f'<img src="{pre}results/{img}" width="{w}" height="{h}" loading="lazy" alt="{esc(t[k + "_title"])}">{badge}</a>'
+                f'<div class="result-body"><h3>{esc(t[k + "_title"])}</h3>'
+                f'<ul class="facts">{"".join(f"<li>{esc(m)}</li>" for m in t[k + "_meta"])}</ul>'
+                f'<dl class="specs">{specs}</dl>'
+                f'<ul class="points">{"".join(f"<li>{esc(m)}</li>" for m in t[k + "_points"])}</ul>'
+                f'<p class="open">{links}</p></div></article>')
+    results = "".join(result(i, *r) for i, r in enumerate(RESULTS, 1))
     tips = "".join(f'<li><h4>{esc(h)}</h4><p>{esc(p)}</p></li>' for h, p in u["tips"])
     reqs = "".join(f"<li>{esc(r)}</li>" for r in t["rq"])
     pi_steps = "".join(f"<li>{pi_markup(s)}</li>" for s in t["in4_steps"])
@@ -231,6 +245,7 @@ def page(lang):
       <p class="kicker">{esc(t["hero_kicker"])}</p>
       <h1>{esc(t["hero_h1"])}</h1>
       <p class="lead">{esc(t["hero_lead"])}</p>
+      <p class="assist"><strong>{esc(t["ai_note_h"])}</strong> {esc(t["ai_note"])}</p>
       <div class="ctas">
         <a class="btn primary" href="#install">{esc(t["cta_install"])}</a>
         <a class="btn" href="{REPO}">{esc(t["cta_github"])}</a>

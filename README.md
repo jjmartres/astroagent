@@ -11,6 +11,8 @@
 
 Agent skills to process astrophotography campaigns shot with my setup (Askar 91F, ZWO ASI585MC Air, Askar D1/D2 dual-band filters) from the **Nebulis** library to a finished image in **PixInsight**, with an AI agent (Claude Code or OpenCode) that proposes every stage and waits for your approval.
 
+> **AI-assisted, not AI-processed.** The language model never touches your image: it measures, proposes and waits for your go. Every operation runs in PixInsight, as a PixInsight process or a plug-in installed in it (BlurXTerminator, NoiseXTerminator, StarXTerminator), and is saved as process icons you can reload and run again yourself.
+
 Nothing here modifies PixInsight or the connector: PixInsight is operated through [pixinsight-connector](https://github.com/mxcoppell/pixinsight-connector), used as published on npm. This repository holds only knowledge (skills), two scripts (a Nebulis client, a project documentation tool) and a PJSR helper.
 
 | Skill | What it does |
@@ -37,15 +39,23 @@ flowchart TD
 
 ## Results
 
-Two campaigns processed with astroagent, from my own data shot from my backyard with the setup above. Every stage was measured, proposed and approved; the figures come from the processing logs.
+Four campaigns processed with astroagent: two from my own backyard in the French Alps, one broadband and one dual-band, and two from [Telescope.live](https://telescope.live/) remote data. Every stage was measured, proposed, approved and run in PixInsight; the figures come from the processing logs. Tokens count everything the agent read and wrote over the session, about 99 % of it re-read from the prompt cache.
 
 | NGC 891 · Silver Sliver Galaxy | Sh2-112 · HOO |
 |---|---|
 | [![NGC 891, RGB](site/results/NGC891_RGB_2026-11-15.jpg)](site/results/NGC891_RGB_2026-11-15.jpg) | [![Sh2-112, HOO](site/results/SH2-112_HOO_2026-11-16.jpg)](site/results/SH2-112_HOO_2026-11-16.jpg) |
 | RGB, broadband · 276 × 150 s · 11 h 30 min · 4 nights | Askar D1 and D2, dual-band · 236 × 180 s · 11 h 48 min · 4 nights |
+| **Telescope** Askar 91F · ZWO ASI585MC Air<br>**Site** French Alps, backyard<br>**Data** my own rig<br>**Tokens** 286 M, 355 k generated | **Telescope** Askar 91F · ZWO ASI585MC Air<br>**Site** French Alps, backyard<br>**Data** my own rig<br>**Tokens** 124 M, 179 k generated |
 | WBPP had switched the 303-frame stack to FastIntegration on its own: the agent read the log and stacked again with full rejection and weights. A centre-bright flat residual and column bands, found by radial and column checks, were removed on the linear starless image. | 79 subs left out before stacking, a whole hazy night among them (signal-to-noise 3.8 × lower than on clear nights). HOO, SHO and a Foraxx-style palette compared: SII at 14 % of Ha turned SHO blue-grey, so HOO was kept. |
 
-## Requirements
+| M16 · Eagle Nebula, SHO (Telescope.live data) | NGC 3521 · Bubble Galaxy (Telescope.live data) |
+|---|---|
+| [![M16, SHO](site/results/M16_SHO_2026-11-17.jpg)](site/results/M16_SHO_2026-11-17.jpg)<br>[HOO version](site/results/M16_HOO_2026-11-17.jpg) | [![NGC 3521, LRGB](site/results/NGC3521_LRGB_2026-11-18.jpg)](site/results/NGC3521_LRGB_2026-11-18.jpg) |
+| SHO and HOO, narrowband mono · 145 × 600 s · 24 h 10 min · 37 nights, 2020–2022 | LRGB, broadband mono · 187 × 300 s · 15 h 35 min · 15 nights, 2024–2025 |
+| **Telescope** Planewave CDK24 · FLI PL9000 (Telescope.live CHI-1)<br>**Site** El Sauce Observatory, Chile<br>**Data** Telescope.live, pre-calibrated by the provider<br>**Tokens** 63 M, 196 k generated | **Telescope** Planewave CDK24 · QHY 600M (Telescope.live CHI-1-CMOS)<br>**Site** El Sauce Observatory, Chile<br>**Data** Telescope.live, pre-calibrated by the provider<br>**Tokens** 71 M, 142 k generated |
+| Lights already calibrated by Telescope.live. Three years of sky backgrounds made the sky level multi-modal, so rejection was relaxed on that one measure, the others kept at z = 3, and 145 of 164 subs stacked. The default gradient model followed the nebula and took 2–3 % of the Pillars' signal: a plane fit on OIII and SII instead, Ha left untouched. | Lights already calibrated by Telescope.live. The local Gaia catalogue held too few stars with spectra in this field for spectrophotometric colour: the agent measured the gap (8 % of the expected sources) and calibrated colour on the galaxy itself. Supernova SN 2024aecx shines in the frames of December 2024 and January 2025: it was kept in the stack. |
+
+# Requirements
 
 - macOS (tested; Windows and Linux untested), PixInsight 1.9.5 or later, with BlurXTerminator, NoiseXTerminator and StarXTerminator; GHS optional.
 - Node.js 22 or later (for the connector), Python 3.9 or later (for `nebulis.py`, standard library only).
@@ -322,7 +332,7 @@ The tests run `nebulis.py` against a local mock of the Nebulis API, and `astro_p
 
 ## Status
 
-Version 0.5.0 ([releases](https://github.com/jjmartres/astroagent/releases)), run end to end on real data twice: NGC 891 (broadband one-shot colour, 11.5 h) and SH2-112 (dual-band D1/D2 on a one-shot colour camera, HOO, 11.8 h). See `CHANGELOG.md`. To cut a release, bump the version in `.claude-plugin/plugin.json` and add its section to `CHANGELOG.md`: on the push to `main`, `.github/workflows/release.yml` creates the `vX.Y.Z` tag and the GitHub release from the CHANGELOG, and moves the `latest` tag. It can also be run by hand from the Actions tab. Every processing value in the skills is a starting point; tune it on your data and commit the values that work.
+Version 0.5.0 ([releases](https://github.com/jjmartres/astroagent/releases)), run end to end on real data four times: NGC 891 (broadband one-shot colour, 11.5 h), SH2-112 (dual-band D1/D2 on a one-shot colour camera, HOO, 11.8 h), and two Telescope.live data sets, M16 (narrowband mono, SHO and HOO, 24.2 h) and NGC 3521 (LRGB mono, 15.6 h). See `CHANGELOG.md`. To cut a release, bump the version in `.claude-plugin/plugin.json` and add its section to `CHANGELOG.md`: on the push to `main`, `.github/workflows/release.yml` creates the `vX.Y.Z` tag and the GitHub release from the CHANGELOG, and moves the `latest` tag. It can also be run by hand from the Actions tab. Every processing value in the skills is a starting point; tune it on your data and commit the values that work.
 
 ## Credits
 
