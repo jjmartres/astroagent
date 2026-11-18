@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: jjmartres
-  version: "0.4.0"
+  version: "0.5.0"
 ---
 
 # Nebulis
@@ -33,7 +33,7 @@ Some commands need an **admin** key: `review`, `push` and `image`. A 403 means t
 | `sessions OBJECT` | Nights with filters, exposures and sub counts. |
 | `analysis OBJECT DATE [--bad-only]` | Frame Analysis of one night: grade (good / fair / bad), flags (`clouds`, `faint`, `trails`, `soft`, `streak`, `spots`, `noStars`, `noisy`), FWHM, star count, kept or dropped, and the frame's library path. Unmeasured frames count as kept. |
 | `review --keep\|--reject\|--reset PATH...` | Record the user's call on frames (paths from `analysis`). `--reset` returns a frame to its grade. Only after the user approved the list. |
-| `plan OBJECT --dates D... \| --all [--precalibrated]` | The stacking plan: per night × filter × exposure, the lights kept and the dark, flat, flat-dark and bias Nebulis picked (`attached` or `matched`), with issues. Exit code 2 when the plan has errors. `--precalibrated` is for lights that are already calibrated (Telescope.live `*_cal.fits`, for example). The missing or imperfect calibration issues (`no_dark`, `dark_temp_far`, `dark_expired`, `no_flat`, `flat_other_night`, `no_flat_calibration`, `bias_expired`) are then shown as ignored and do not count; `unknown_settings` still does. |
+| `plan OBJECT --dates D... \| --all [--precalibrated]` | The stacking plan: per night × filter × exposure, the lights kept and the dark, flat, flat-dark and bias Nebulis picked (`attached` or `matched`), with issues. Exit code 2 when the plan has errors. `--precalibrated` is for lights that are already calibrated (Telescope.live `*_cal.fits`, for example). It sends `"precalibrated": true` to the server, which then attaches no calibration frame and raises no calibration issue; lights whose FITS header says they are calibrated (`PROC = 'True'`) are detected by the server without it, and their groups show `already calibrated`. The plan also names each group's camera and telescope: lights of another rig form their own group. On a server without that option, the missing or imperfect calibration issues (`no_dark`, `dark_temp_far`, `dark_expired`, `no_flat`, `flat_other_night`, `no_flat_calibration`, `bias_expired`) are then shown as ignored and do not count; `unknown_settings` still does. |
 | `fetch OBJECT --dates D... --dest DIR [--precalibrated] [--allow-warnings] [--force]` | Builds the export on the server (WBPP layout by default), downloads it and unpacks it under `DIR/<export folder>/`. Refuses a plan with errors; refuses warnings unless `--allow-warnings` (pass it only after the user accepted each warning). `--precalibrated` as for `plan`: pass it only when the lights really are calibrated, never to get round a missing dark or flat. The export then holds lights only. The server builds the ZIP in one go: above a few GB, fetch **one night per call** (`--dates 2026-10-14`, then the next); a 7 GB multi-night export once stopped the server mid-build. Each night's export repeats the shared darks, bias and flats: compare them by checksum and keep one copy. |
 | `archives OBJECT` | Project archives already stored with the object. |
 | `telescopes` | Telescope profiles: model, optical configurations (focal length, pixel size, sensor size), sensor type, filters. Connection details are never printed. |

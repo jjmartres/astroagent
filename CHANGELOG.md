@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0 (2026-11-18)
+
+Pre-calibrated lights are now handled by the Nebulis server as well as by the client: the M16 run (Telescope.live CHI-1, calibrated by the provider) showed that the export could carry calibration frames of another camera.
+
+- `nebulis`: `plan` and `fetch --precalibrated` send `"precalibrated": true` in the request body, so the server attaches no calibration frame and raises no calibration issue (nebulis-app/nebulis#46). Lights whose header says they are calibrated (`PROC = 'True'`) are detected by the server without the flag. The plan shows the plan-level `precalibrated` flag, each group's camera and telescope, and an `already calibrated` line for a calibrated group, when the server returns them. Older servers ignore the field, and the client still sets their calibration issues aside.
+
 ## 0.4.0 (2026-11-16)
 
 One name per processing run, and one layout for every project archive pushed to Nebulis. The first two archives (NGC891, SH2-112) differed: a PixInsight project in one only, named `ngc891.pxiproject`; session records in `processing/` or `work/`; the JPEG for Nebulis named `_final.jpg` or `_q95.jpg`.

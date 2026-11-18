@@ -101,7 +101,7 @@ def search_objects(term: str) -> list:
             if any(t in "".join(str(v).split()).lower() for v in [o["id"], o["catalogId"], o["name"], *o["aliases"]])]
 
 
-STATE = {"polls": 0, "reviews": [], "uploads": [], "images": [], "zip": ZIP}
+STATE = {"polls": 0, "reviews": [], "uploads": [], "images": [], "zip": ZIP, "bodies": []}
 
 
 class H(BaseHTTPRequestHandler):
@@ -194,9 +194,12 @@ class H(BaseHTTPRequestHandler):
             STATE["zip"] = ZIP
             return self.send(200, {"jobId": "job1"})
         if p == f"/api/v1/library/objects/{OBJ2}/stacking-export/plan":
-            assert json.loads(raw)["dates"] == ["2021-12-05"]
+            req = json.loads(raw)
+            assert req["dates"] == ["2021-12-05"]
+            STATE["bodies"].append(("plan", req))
             return self.send(200, PLAN2)
         if p == f"/api/v1/library/objects/{OBJ2}/stacking-export":
+            STATE["bodies"].append(("export", json.loads(raw)))
             STATE["zip"] = ZIP2
             return self.send(200, {"jobId": "job2"})
         if p == f"/api/v1/library/objects/{OBJ}/project-archives":
