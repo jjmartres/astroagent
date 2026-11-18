@@ -25,8 +25,8 @@ Commands:
   fetch OBJECT (--dates D [D ...] | --all) --dest DIR [--layout wbpp|siril] [--include-not-kept]
         [--precalibrated] [--allow-warnings] [--force]
                                           download the stacking export and unpack it under DIR
-                                          (--precalibrated: lights already calibrated, so missing
-                                          darks, flats or bias are not errors)
+                                          (--precalibrated: lights already calibrated; sent to the
+                                          server, and missing darks, flats or bias are not errors)
   archives OBJECT                         project archives stored with the object
   telescopes                              telescope profiles: model, optical configs, filters
   site                                    the active observing site: coordinates, Bortle class
@@ -236,8 +236,21 @@ PRECALIBRATED_HINT = ("if the lights are already calibrated (Telescope.live *_ca
                       "re-run with --precalibrated")
 
 
+def request_body(args, dates: list, **extra) -> dict:
+    """Body of the plan and export requests. With --precalibrated the server is told too
+    ("precalibrated": true, nebulis-app/nebulis#46): it then attaches no calibration frame and
+    raises no calibration issue. Lights whose header says they are calibrated (PROC = 'True')
+    are detected by the server without it. Older servers ignore the field; the client-side
+    filter below still sets their calibration issues aside."""
+    body = {"dates": dates, "includeNotKept": bool(args.include_not_kept), **extra}
+    if args.precalibrated:
+        body["precalibrated"] = True
+    return body
+
+
 def plan_text(plan: dict, precalibrated: bool = False) -> tuple[str, int, int]:
-    lines = [f"{plan['objectId']} · nights {', '.join(plan['nights'])}"]
+    lines = [f"{plan['objectId']} · nights {', '.join(plan['nights'])}"
+             + (" · precalibrated (no calibration frames)" if plan.get("precalibrated") else "")]
     t = plan["totals"]
     errors, warnings, ignored = counted_issues(plan, precalibrated)
     lines.append(f"lights {t['lights']} kept, {t['excluded']} not kept · calibration frames {t['calibrationFrames']}"
@@ -246,7 +259,10 @@ def plan_text(plan: dict, precalibrated: bool = False) -> tuple[str, int, int]:
     for g in plan["groups"]:
         n = g["frames"] if plan.get("includeNotKept") else g["kept"]
         lines.append(f"\n{g['night']} · filter {g['filter'] or 'none'} · {g['exposureSec']}s · gain {g['gain']}"
-                     f" · bin {g['binning']} · {g['sensorTempC']}°C · {n} lights ({g['frames']} total)")
+                     f" · bin {g['binning']} · {g['sensorTempC']}°C · {n} lights ({g['frames']} total)"
+                     + "".join(f" · {g[k]}" for k in ("camera", "telescope") if g.get(k)))
+        if g.get("precalibrated"):
+            lines.append("  already calibrated: no calibration frames")
         for label in ("dark", "flat", "flatDark", "bias"):
             c = g.get(label)
             if not c:
@@ -400,7 +416,7 @@ def cmd_review(c: Client, args):
 def cmd_plan(c: Client, args):
     dates = resolve_dates(c, args.object, args)
     plan = c.call("POST", f"/library/objects/{q(args.object)}/stacking-export/plan",
-                  {"dates": dates, "includeNotKept": bool(args.include_not_kept)})
+                  request_body(args, dates))
     text, errors, _ = plan_text(plan, args.precalibrated)
     out(args, plan, text)
     if errors:
@@ -411,7 +427,7 @@ def cmd_plan(c: Client, args):
 
 def cmd_fetch(c: Client, args):
     dates = resolve_dates(c, args.object, args)
-    body = {"dates": dates, "includeNotKept": bool(args.include_not_kept), "layout": args.layout}
+    body = request_body(args, dates, layout=args.layout)
     plan = c.call("POST", f"/library/objects/{q(args.object)}/stacking-export/plan", body)
     text, errors, warnings = plan_text(plan, args.precalibrated)
     if errors:

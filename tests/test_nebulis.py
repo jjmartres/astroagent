@@ -121,6 +121,35 @@ class NebulisCliTest(unittest.TestCase):
         self.assertIn("2 calibration issues ignored", r.stdout)
         self.assertIn("no_dark (ignored: lights already calibrated)", r.stdout)
 
+    def test_precalibrated_sent_to_server(self):
+        # The server is told too: plan and export requests carry "precalibrated": true, and only then.
+        mock_nebulis.STATE["bodies"] = []
+        self.run_cli("plan", "NGC4438", "--all")
+        self.assertNotIn("precalibrated", mock_nebulis.STATE["bodies"][-1][1])
+        mock_nebulis.STATE["bodies"] = []
+        mock_nebulis.STATE["polls"] = 0
+        with tempfile.TemporaryDirectory() as d:
+            r = self.run_cli("fetch", "NGC4438", "--all", "--dest", d, "--precalibrated", "--allow-warnings")
+            self.assertEqual(r.returncode, 0, r.stderr)
+        kinds = [k for k, _ in mock_nebulis.STATE["bodies"]]
+        self.assertEqual(kinds, ["plan", "export"])
+        for _, body in mock_nebulis.STATE["bodies"]:
+            self.assertIs(body["precalibrated"], True)
+
+    def test_plan_shows_server_precalibrated_group(self):
+        # A server with nebulis-app/nebulis#46 marks calibrated groups and names the camera.
+        plan = json.loads(json.dumps(mock_nebulis.PLAN2))
+        g = plan["groups"][0]
+        plan["precalibrated"] = True
+        g.update({"camera": "FLI PL9000", "telescope": "CHI-1", "precalibrated": True, "issues": [], "dark": None, "flat": None, "flatDark": None, "bias": None})
+        sys.path.insert(0, str(SCRIPT.parent))
+        import nebulis  # noqa: E402
+        text, errors, _ = nebulis.plan_text(plan)
+        self.assertIn("FLI PL9000 · CHI-1", text)
+        self.assertIn("precalibrated (no calibration frames)", text.splitlines()[0])
+        self.assertEqual(errors, 0)
+        self.assertIn("already calibrated: no calibration frames", text)
+
     def test_precalibrated_keeps_other_issues(self):
         # Only calibration issues are set aside: unknown_settings is still a warning to accept.
         with tempfile.TemporaryDirectory() as d:
