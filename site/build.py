@@ -73,11 +73,18 @@ def render_session(u):
 
 NEBULIS_URL = "https://nebulis.app/"
 TELESCOPE_LIVE_URL = "https://telescope.live/"
+PIXINSIGHT_URL = "https://pixinsight.com/"
+# Product names linked in the page text: (word, pattern, url)
+LINKS = [
+    ("Nebulis", r"\bNebulis\b(?! Connector)", NEBULIS_URL),
+    ("Telescope.live", r"Telescope\.live", TELESCOPE_LIVE_URL),
+    ("PixInsight", r"\bPixInsight\b", PIXINSIGHT_URL),
+]
 SKIP = ("a", "b", "pre", "code", "script", "style", "button", "svg", "title", "textarea")
 
 
-def link_nebulis(html):
-    """Link every visible mention of Nebulis and Telescope.live, except inside links, code, the terminal mock-up and the head."""
+def link_names(html):
+    """Link every visible mention of Nebulis, Telescope.live and PixInsight, except inside links, code, the terminal mock-up and the head."""
     head, sep, body = html.partition("<body")
     parts = re.split(r"(<[^>]+>)", body)
     depth, in_cc = 0, False
@@ -93,11 +100,9 @@ def link_nebulis(html):
             elif tag in SKIP and not part.endswith("/>"):
                 depth += -1 if closing else 1
         elif depth == 0 and not in_cc and i > 0:
-            if "Nebulis" in part:
-                part = re.sub(r"\bNebulis\b(?! Connector)", f'<a class="ext" href="{NEBULIS_URL}">Nebulis</a>', part)
-            if "Telescope.live" in part:
-                part = part.replace("Telescope.live", f'<a class="ext" href="{TELESCOPE_LIVE_URL}">Telescope.live</a>')
-            parts[i] = part
+            for word, pattern, url in LINKS:
+                if word in parts[i]:
+                    parts[i] = re.sub(pattern, f'<a class="ext" href="{url}">{word}</a>', parts[i])
     return head + sep + "".join(parts)
 
 
@@ -376,7 +381,7 @@ def main():
     for lang in ORDER:
         d = OUT if lang == "en" else OUT / lang
         d.mkdir(exist_ok=True)
-        (d / "index.html").write_text(link_nebulis(page(lang)), encoding="utf-8")
+        (d / "index.html").write_text(link_names(page(lang)), encoding="utf-8")
     (OUT / ".nojekyll").write_text("")
     print("built", sorted(str(p.relative_to(OUT)) for p in OUT.rglob("index.html")))
 
