@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1 (2026-11-20)
+
+Every image the agent puts before the user is shown twice, as in the M20 run (SHO, Telescope.live CHI-1), where it made each choice easy.
+
+- `astro-processing`: under ground rule 1, each candidate, before/after, 1:1 crop and the final image stays open as a PixInsight view (with an STF while linear), and its `save_preview` JPEG is opened on screen at once (`open` on macOS, `xdg-open` on Linux, `start ""` on Windows; several at once to compare). `save_preview` and `save_and_show_preview` only write the file. The message names each JPEG and its view; a candidate's view is closed once the user has chosen.
+
 ## 0.5.0 (2026-11-18)
 
 Pre-calibrated lights are now handled by the Nebulis server as well as by the client: the M16 run (Telescope.live CHI-1, calibrated by the provider) showed that the export could carry calibration frames of another camera.
