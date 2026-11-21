@@ -1,8 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.5.2 (2026-11-21)
+
+Shorter, more educational replies during processing, each with its options and a reasoned recommendation.
 
 - `astro-processing`: every decision message has the same frame: *Measured*, *Options* (each with its pros and cons), *Recommendation* (the choice and why, tied to a number, a gate or the user's aim), *Preview*, then one question. The tone teaches briefly (one sentence the first time a process or a measure appears) and messages stay short (about 15 lines outside tables, no recap, full parameters in the session file and `PROCESSING.md`).
+- Site: the stage 9 example shows the new frame (Options with pros and cons, Recommendation with its reason), in four languages; the label column is wider so the longer labels fit.
 
 ## 0.5.1 (2026-11-20)
 
