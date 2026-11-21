@@ -1,7 +1,7 @@
 {
   "name": "astroagent",
   "description": "Agent skills to process astrophotography campaigns from a Nebulis library to a finished image in PixInsight, through the pixinsight-connector MCP server: sub review, calibration plan, WBPP stacking, dual-band HOO/SHO or broadband processing, export, processing log, and project documentation: rig.json from FITS headers, PixInsight project description, documentation page, session report, process icons, AstroBin fields.",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "author": {
     "name": "jjmartres",
     "url": "https://github.com/jjmartres"

@@ -210,7 +210,7 @@ h3.minor { font-size: 15px; font-family: var(--font-mono); font-weight: 500; col
 
 .term { display: flex; flex-direction: column; }
 .term-body { flex: 1; }
-.term-body p:has(> .tag) { display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; }
+.term-body p:has(> .tag) { display: grid; grid-template-columns: 9.5em minmax(0, 1fr); column-gap: 12px; }
 .term-body .tag { min-width: 0; }
 @media (max-width: 640px) { .term-body p:has(> .tag) { grid-template-columns: 1fr; } }
 

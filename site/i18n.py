@@ -57,7 +57,7 @@ LANGS = {
         "rq_title": "Requirements",
         "rq": ["PixInsight 1.9.5 or later, with BlurXTerminator, NoiseXTerminator and StarXTerminator", "Node.js 22 or later and Python 3.9 or later", "A Nebulis server and an API key (admin to record reviews and upload results)", "Any coding agent that reads Agent Skills (Claude Code, OpenCode…)"],
         "st_title": "Version",
-        "st": "0.5.1",
+        "st": "0.5.2",
         "ft_credits": "Built on pixinsight-connector and its companion skills by Min Xie, and on Nebulis. MIT licence.",
         "ft_scope": "Built around my scope: Askar 91F, ZWO ASI585MC Air, Askar D1/D2 filters.",
         "lang_switch": "Language",
@@ -120,7 +120,7 @@ LANGS = {
         "rq_title": "Prérequis",
         "rq": ["PixInsight 1.9.5 ou plus, avec BlurXTerminator, NoiseXTerminator et StarXTerminator", "Node.js 22 ou plus et Python 3.9 ou plus", "Un serveur Nebulis et une clé d'API (admin pour enregistrer les revues et renvoyer les résultats)", "Un agent de code compatible Agent Skills (Claude Code, OpenCode…)"],
         "st_title": "Version",
-        "st": "0.5.1",
+        "st": "0.5.2",
         "ft_credits": "Construit sur pixinsight-connector et ses skills compagnons de Min Xie, et sur Nebulis. Licence MIT.",
         "ft_scope": "Conçu autour de mon setup : Askar 91F, ZWO ASI585MC Air, filtres Askar D1/D2.",
         "lang_switch": "Langue",
@@ -183,7 +183,7 @@ LANGS = {
         "rq_title": "Requisitos",
         "rq": ["PixInsight 1.9.5 o posterior, con BlurXTerminator, NoiseXTerminator y StarXTerminator", "Node.js 22 o posterior y Python 3.9 o posterior", "Un servidor Nebulis y una clave de API (de administrador para guardar revisiones y subir resultados)", "Un agente de código compatible con Agent Skills (Claude Code, OpenCode…)"],
         "st_title": "Versión",
-        "st": "0.5.1",
+        "st": "0.5.2",
         "ft_credits": "Construido sobre pixinsight-connector y sus skills complementarios de Min Xie, y sobre Nebulis. Licencia MIT.",
         "ft_scope": "Pensado para mi equipo: Askar 91F, ZWO ASI585MC Air, filtros Askar D1/D2.",
         "lang_switch": "Idioma",
@@ -246,7 +246,7 @@ LANGS = {
         "rq_title": "Requisiti",
         "rq": ["PixInsight 1.9.5 o successivo, con BlurXTerminator, NoiseXTerminator e StarXTerminator", "Node.js 22 o successivo e Python 3.9 o successivo", "Un server Nebulis e una chiave API (di amministratore per salvare le revisioni e caricare i risultati)", "Un agente di coding compatibile con le Agent Skills (Claude Code, OpenCode…)"],
         "st_title": "Versione",
-        "st": "0.5.1",
+        "st": "0.5.2",
         "ft_credits": "Basato su pixinsight-connector e sulle skill di accompagnamento di Min Xie, e su Nebulis. Licenza MIT.",
         "ft_scope": "Pensato attorno al mio setup: Askar 91F, ZWO ASI585MC Air, filtri Askar D1/D2.",
         "lang_switch": "Lingua",
@@ -645,3 +645,34 @@ for _lang, _texts in INST.items():
 for _lang, _lead in {"en": "One prompt, on the computer that runs PixInsight", "fr": "Un prompt, sur l'ordinateur qui fait tourner PixInsight",
                      "es": "Un prompt, en el ordenador que ejecuta PixInsight", "it": "Un prompt, sul computer che esegue PixInsight"}.items():
     LANGS[_lang]["in_lead"] = _lead
+
+
+# Decision frame (0.5.2): options with pros and cons, then a recommendation with its reason.
+APPROVE = {
+    "en": {
+        "l2d": "Measured values, options with their pros and cons, a recommendation with its reason, and a preview.",
+        "ap_proposal": "Options", "ap_why": "Recommendation",
+        "ap_ex_proposal": "s1, median 0.12: cleanest background, but OIII stays faint. s2, 0.18: OIII shows and noise stays low. s3, 0.25: most faint detail, but the core clips.",
+        "ap_ex_why": "s2. The same median per channel balances Ha and OIII before the palette, and it passes G7.",
+    },
+    "fr": {
+        "l2d": "Des valeurs mesurées, des options avec leurs avantages et inconvénients, une recommandation justifiée et un aperçu.",
+        "ap_proposal": "Options", "ap_why": "Recommandation",
+        "ap_ex_proposal": "s1, médiane 0,12 : le fond le plus propre, mais l'OIII reste faible. s2, 0,18 : l'OIII ressort et le bruit reste bas. s3, 0,25 : le plus de détails faibles, mais le cœur sature.",
+        "ap_ex_why": "s2. La même médiane par canal équilibre Ha et OIII avant la palette, et il passe G7.",
+    },
+    "es": {
+        "l2d": "Valores medidos, opciones con sus ventajas e inconvenientes, una recomendación razonada y una vista previa.",
+        "ap_proposal": "Opciones", "ap_why": "Recomendación",
+        "ap_ex_proposal": "s1, mediana 0,12: el fondo más limpio, pero el OIII queda débil. s2, 0,18: el OIII se ve y el ruido sigue bajo. s3, 0,25: más detalle débil, pero el núcleo satura.",
+        "ap_ex_why": "s2. La misma mediana por canal equilibra Ha y OIII antes de la paleta, y pasa G7.",
+    },
+    "it": {
+        "l2d": "Valori misurati, opzioni con vantaggi e svantaggi, una raccomandazione motivata e un'anteprima.",
+        "ap_proposal": "Opzioni", "ap_why": "Raccomandazione",
+        "ap_ex_proposal": "s1, mediana 0,12: il fondo più pulito, ma l'OIII resta debole. s2, 0,18: l'OIII emerge e il rumore resta basso. s3, 0,25: più dettagli deboli, ma il nucleo satura.",
+        "ap_ex_why": "s2. La stessa mediana per canale bilancia Ha e OIII prima della palette, e supera G7.",
+    },
+}
+for _lang, _texts in APPROVE.items():
+    LANGS[_lang].update(_texts)

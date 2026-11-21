@@ -55,7 +55,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SKILL = HERE.parent
 SCHEMA = SKILL / "reference" / "rig.schema.json"
-VERSION = "0.5.1"
+VERSION = "0.5.2"
 FITS_EXT = (".fit", ".fits", ".fts")
 
 

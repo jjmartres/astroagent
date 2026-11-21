@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: jjmartres
-  version: "0.5.1"
+  version: "0.5.2"
 ---
 
 # Astro processing
@@ -33,7 +33,14 @@ Before the first stage, read these files next to this one, once per session:
 
 ## Ground rules
 
-1. **Approval at every stage.** Present: *Measured* (numbers), *Proposal* (tools and exact parameters), *Why* (one line), *Preview* (`save_preview`, 1:1 crops for detail). Then stop and wait. Run a stage without waiting only if the user said so for that stage in this session; record it in the session file.
+1. **Approval at every stage.** Every message that asks for a decision has the same frame, in this order, then one closing question; stop and wait. Run a stage without waiting only if the user said so for that stage in this session; record it in the session file.
+   - *Measured*: the numbers that decide, in one small table when channels or candidates are compared.
+   - *Options*: usually two or three (include "leave it as is" when that is a real choice), each with its **pros** and **cons**, one short line each. When only one sensible option exists, say so and give its cons anyway.
+   - *Recommendation*: the option you pick and **why**, tied to a measured number, a gate or what the user said they want. Give the tool and the parameters of that option in one line.
+   - *Preview*: `save_preview`, 1:1 crops for detail.
+
+   **Teach, briefly.** The user may be learning PixInsight. The first time a process or a measure appears in the session, say in one sentence what it does or what its number means ("MAD: background noise, lower is smoother"; "SCNR removes the green cast that SHO puts in the background"). Do not repeat an explanation already given.
+   **Keep it short**: about 15 lines outside the tables. No recap of earlier stages, no number repeated between a table and the text, no log notes unless they need a decision. Full parameters go in the session file and `PROCESSING.md`; the message names only the ones the user may want to change.
    **Show every image twice: in PixInsight and as a JPEG.** Each image you put before the user (a candidate, a before/after, a 1:1 crop, the final image) stays open as a view in PixInsight, with an STF when it is still linear, so the user can zoom on it there. And its JPEG from `save_preview` is opened on the user's screen right away: `open <path>` on macOS (it opens in Preview), `xdg-open` on Linux, `start ""` on Windows; several JPEGs to compare go in one `open` call. `save_preview` (and its alias `save_and_show_preview`) only writes the file: it opens nothing. In the message, name each JPEG and the PixInsight view it shows, and say they are open. Close a candidate's view only once the user has chosen.
 2. **One PixInsight call at a time**, never several in parallel: the connector runs one script at a time and parallel calls can all fail together. Read every result. `FAILED`, `REFUSED`, `BLOCKED`, `View not found` or `STOPPED BY USER` needs a decision, not a blind retry. After `STOPPED BY USER`, stop; call `resume_bridge` only when the user says so. If every call fails with "Watcher did not start", PixInsight is usually blocked by a modal dialog (for example "Unable to read the directory …"): ask the user to close it, then make one test call. In PJSR, process constants such as `SubframeSelector.prototype.MeasureSubframes` or `Convolution.prototype.Parametric` can be undefined: use the numeric value (`describe_process` lists them), and check a numeric enum against its static name (`ICCProfileTransformation.RelativeColorimetric` is 2, not 1). If the `pixinsight-connector-troubleshooting` skill is installed, use it for tool pitfalls.
 3. **Raw data is read-only.** Never write, move or delete anything under `<workspace>/data/` or a Nebulis library path. Working files go to `<workspace>/agentic/work/`, deliverables to `<workspace>/output/`. The connector already refuses other paths for its own writes; keep shell writes to the same two folders.
