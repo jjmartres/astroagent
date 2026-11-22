@@ -140,6 +140,30 @@ class AstroProjectTest(unittest.TestCase):
         self.assertEqual(len(ab["acquisition_details"]), 2)               # one row per night and filter
         self.assertEqual(ab["acquisition_details"][0]["darks"], 2)
 
+    def test_reddit(self):
+        self.scan("--set", "telescope.aperture_mm=91")
+        shutil.copy(FIX / "research.json", self.ws / "output" / "research.json")
+        shutil.copy(FIX / "report.json", self.ws / "output" / "report.json")
+        final = self.ws / "output" / "final"
+        final.mkdir()
+        (final / "Sh2-105_Foraxx_2026-11-06.jpg").write_bytes(b"\xff\xd8\xff")
+        (final / "Sh2-105_Foraxx_2026-11-06_web.jpg").write_bytes(b"\xff\xd8\xff")
+        r = self.run_cli("reddit", self.ws)
+        self.assertEqual(r.returncode, 2, r.stdout + r.stderr)            # no mount: rule 5 names it
+        self.assertIn("mount", r.stdout)
+        self.scan("--set", "mount=ZWO AM3N")
+        r = self.run_cli("reddit", self.ws)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        post = json.loads((self.ws / "output" / "reddit.json").read_text())
+        self.assertEqual(post["title"], "Crescent Nebula (Sh2-105)")       # object only, no gear or palette
+        self.assertEqual(post["image_file"], "final/Sh2-105_Foraxx_2026-11-06.jpg")
+        body = post["body"]
+        for part in ("**Acquisition**", "Mount: ZWO AM3N", "D1: ", "darks", "**Processing**", "PixInsight 1.9.5",
+                     "WBPP stacking", "BlurXTerminator", "Palette: Foraxx"):
+            self.assertIn(part, body)
+        self.assertNotIn("Log and push", body)
+        self.assertNotIn("°N", body)                                        # no coordinates
+
     def test_project_needs_valid_rig(self):
         r = self.run_cli("project", self.ws)
         self.assertEqual(r.returncode, 2)

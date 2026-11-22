@@ -11,6 +11,7 @@ Every file goes into the processing workspace laid out by the astro-processing s
   <workspace>/output/doc/index.html            documentation page                     (doc)
   <workspace>/output/doc/session-report.html   what was done, stage by stage          (report)
   <workspace>/output/astrobin.json             AstroBin form fields, optional         (astrobin)
+  <workspace>/output/reddit.json               r/astrophotography post, optional      (reddit)
   <workspace>/output/<NAME>.xpsm                process icons                          (icons, then xpsm)
   <workspace>/output/push/                     the project archive's content, standard layout (bundle)
 
@@ -29,6 +30,8 @@ Commands:
   doc WS                          write output/doc/index.html
   report WS                       write output/doc/session-report.html (needs report.json)
   astrobin WS                     write output/astrobin.json
+  reddit WS                       write output/reddit.json: title, image and body for r/astrophotography
+                                  (exit 2 when a fact its rules require is missing)
   icons WS [--log FILE ...] [--from-seq N] [--exclude-view REGEX]
                                   read the pixinsight-connector call logs and write agentic/work/icons.json and
                                   agentic/work/icons.js, the PJSR to run with run_pjsr_file; --from-seq skips an
@@ -549,7 +552,7 @@ def hours(seconds: float) -> str:
 
 
 def campaign(rig: dict, research: dict | None, report: dict | None) -> dict:
-    """Everything the project, doc, report and astrobin outputs share."""
+    """Everything the project, doc, report, astrobin and reddit outputs share."""
     research = research or {}
     report = report or {}
     t = rig["target"]
@@ -698,6 +701,133 @@ def cmd_astrobin(args) -> int:
     }
     p = ws.save("astrobin.json", out)
     print(f"astrobin.json: {p} · {len(details)} acquisition row(s), one per night and filter")
+    return 0
+
+
+# ─── reddit.json (r/astrophotography) ───────────────────────────────────────
+
+# Connector tools and the PixInsight process (or script) they run, for the processing rundown.
+TOOL_PROCESS = {
+    "run_wbpp": "WBPP", "run_bxt": "BlurXTerminator", "run_nxt": "NoiseXTerminator", "run_sxt": "StarXTerminator",
+    "run_spcc": "SPCC", "run_spfc": "SPFC", "run_mgc": "MGC", "run_gradient_correction": "GradientCorrection",
+    "run_abe": "ABE", "run_per_channel_abe": "ABE per channel", "run_background_neutralization": "BackgroundNeutralization",
+    "run_curves": "CurvesTransformation", "run_hdrmt": "HDRMultiscaleTransform", "run_lhe": "LocalHistogramEqualization",
+    "run_scnr": "SCNR", "run_plate_solve": "ImageSolver", "linear_fit": "LinearFit", "lrgb_combine": "LRGBCombination",
+    "combine_channels": "ChannelCombination", "robust_median_stretch": "statistical stretch", "auto_stretch": "STF stretch",
+    "stretch_stars": "star stretch", "multi_scale_enhance": "MultiscaleLinearTransform", "run_pixelmath": "PixelMath",
+    "continuum_subtract_ha": "continuum subtraction", "dynamic_narrowband_blend": "narrowband blend",
+}
+REDDIT_TITLE_MAX = 300      # Reddit's limit
+REDDIT_COMMENT_MAX = 10000  # a comment; a post body takes 40 000
+REDDIT_IMAGE_MAX = 20 << 20  # 20 MB per image
+
+
+def stage_processes(params) -> list[str]:
+    if not isinstance(params, dict):
+        return []
+    found = []
+    for key in params:
+        name = TOOL_PROCESS.get(key) or (key if key in ICON_PROCESSES else None)
+        if name and name not in found:
+            found.append(name)
+    return found
+
+
+def cmd_reddit(args) -> int:
+    """The r/astrophotography post: title with the object name only (rule 4), the image to upload in the post
+    (rule 1), and a body with acquisition and processing details (rule 5). Facts only: the user writes the
+    opening lines in their own words."""
+    ws = Workspace(args.workspace)
+    rig = ws.load("rig.json", required=True)
+    research, report = ws.load("research.json") or {}, ws.load("report.json") or {}
+    c = campaign(rig, research, report)
+    missing, checks = [], []
+
+    title = f"{c['common_name']} ({c['id']})" if c["common_name"] else c["id"]
+    if len(title) > REDDIT_TITLE_MAX:
+        title = title[:REDDIT_TITLE_MAX]
+
+    jpgs = sorted(p for p in ws.output.glob("final/*.jpg") if not p.name.endswith("_web.jpg"))
+    webs = sorted(ws.output.glob("final/*_web.jpg"))
+    image = jpgs[-1] if jpgs else (webs[-1] if webs else None)
+    if image and image.stat().st_size > REDDIT_IMAGE_MAX and webs:
+        checks.append(f"{image.name} is over 20 MB, Reddit's image limit: {webs[-1].name} is used instead")
+        image = webs[-1]
+    if not image:
+        missing.append("output/final/<NAME>.jpg (Stage 11)")
+
+    acq = [f"- Telescope: {c['telescope']}", f"- Camera: {c['camera']}"
+           + (f", cooled to {rig['tec_setpoint_c']:g} °C" if rig.get("tec_setpoint_c") is not None else "")]
+    if rig.get("mount"):
+        acq.append(f"- Mount: {rig['mount']}")
+    else:
+        missing.append("mount (rule 5 names it): scan WS --set mount=\"…\"")
+    acq.append(f"- Filters: {'; '.join(c['filters'])}")
+    acq.append(f"- Site: {c['site']}, Bortle {rig['capture_location']['bortle']}")
+    acq.append(f"- Lights: {c['subs_kept']} subs kept of {c['subs_total']}, {c['total']} total, {c['nights']} night"
+               f"{'s' if c['nights'] != 1 else ''}" + (f" ({c['dates'][0]} to {c['dates'][-1]})" if len(c["dates"]) > 1
+                                                       else (f" ({c['dates'][0]})" if c["dates"] else "")))
+    acq += [f"    - {x}" for x in per_filter_lines(rig)]
+    seqs = rig["sequences"]
+    calib = [f"{sum(s['subs'] for s in seqs[key])} {label}" for key, label in
+             (("darks", "darks"), ("flats", "flats"), ("flat_darks", "flat-darks"), ("biases", "bias")) if seqs.get(key)]
+    acq.append(f"- Calibration: {', '.join(calib)}" if calib else "- Calibration: lights received pre-calibrated")
+    if not calib:
+        checks.append("no calibration frames: if the lights were shot by a remote or professional service, rule 3 "
+                      "(original content you captured yourself) may not allow the post; read the rule first")
+
+    env = report.get("environment") or {}
+    soft = ["PixInsight" + (f" {env['PixInsight']}" if env.get("PixInsight") else "")]
+    soft += [f"{k} {v}".strip() for k, v in env.items() if k not in ("PixInsight", "Nebulis", "pixinsight-connector", "astroagent")]
+    soft += [f"Nebulis {env['Nebulis']}" if env.get("Nebulis") else "Nebulis",
+             f"astroagent {env.get('astroagent') or VERSION} (an agent that runs each step in PixInsight)"]
+    proc = [f"- Software: {', '.join(soft)}"]
+    steps = []
+    for s in sorted(report.get("stages") or [], key=lambda s: s.get("n", 0)):
+        if s.get("status") != "done" or re.search(r"\b(log|push)\b", s.get("name", ""), re.I):
+            continue
+        text = s.get("summary") or s.get("proposal") or s.get("decision") or ""
+        params = s.get("params")
+        procs = stage_processes(params)
+        if not procs and isinstance(params, dict):     # parameters without a tool name: show the values applied
+            procs = [f"{k.replace('_', ' ')} {json.dumps(v) if isinstance(v, bool) else v}"
+                     for k, v in params.items() if isinstance(v, (str, int, float, bool))][:4]
+        if not text and not procs:
+            continue
+        line = f"- {s.get('name', 'Stage ' + str(s.get('n', '')))}"
+        if text:
+            line += f": {text}"
+        if procs:
+            line += f" ({', '.join(procs)})"
+        steps.append(line)
+    if c["palette"]:
+        steps.append(f"- Palette: {c['palette']}")
+    if steps:
+        proc += steps
+    else:
+        missing.append("output/report.json with its stages (rule 5 wants the workflow, not only the program names)")
+
+    body = "\n".join(["[A few lines in your own words: the target, why you chose it, what was hard.]", "",
+                      "**Acquisition**", "", *acq, "", "**Processing**", "", *proc, ""])
+    if len(body) > REDDIT_COMMENT_MAX:
+        checks.append(f"the body is {len(body)} characters: too long for a comment (10 000), fine as the post text (40 000)")
+    checks += ["replace the first line of the body with your own words, no emojis",
+               "upload the image in the post itself: no link to another site, except AstroBin (rule 1)",
+               "the title names the object only: no equipment, palette or integration time (rule 4)",
+               "a reprocessing of an image already posted needs a week between the two posts (rule 3)"]
+    out = {"subreddit": "r/astrophotography", "title": title,
+           "image_file": os.path.relpath(image, ws.output) if image else "", "body": body, "checks": checks}
+    p = ws.save("reddit.json", out)
+    print(f"reddit.json: {p}")
+    print(f"title  {title}")
+    print(f"image  {('output/' + out['image_file']) if image else '(none yet)'}")
+    for ch in checks:
+        print(f"check: {ch}")
+    if missing:
+        print("missing:")
+        for m in missing:
+            print(f"  - {m}")
+        return 2
     return 0
 
 
@@ -922,7 +1052,7 @@ def cmd_xpsm(args) -> int:
 
 DATE_RE = r"\d{4}-\d{2}-\d{2}"
 SESSION_FILES = ("astro-session.md", "call-log.md", "ss_flagged.txt", "subframeselector*.csv")
-ARCHIVE_JSON = ("rig.json", "research.json", "report.json", "project.json", "astrobin.json")
+ARCHIVE_JSON = ("rig.json", "research.json", "report.json", "project.json", "astrobin.json", "reddit.json")
 
 
 def name_part(text: str) -> str:
@@ -1110,7 +1240,7 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("scan"); s.add_argument("workspace"); s.add_argument("--export"); s.add_argument("--object")
     s.add_argument("--telescope"); s.add_argument("--site"); s.add_argument("--set", nargs="+", metavar="KEY=VALUE")
     s = sub.add_parser("validate"); s.add_argument("file")
-    for name in ("project", "doc", "report", "astrobin"):
+    for name in ("project", "doc", "report", "astrobin", "reddit"):
         sub.add_parser(name).add_argument("workspace")
     s = sub.add_parser("icons"); s.add_argument("workspace"); s.add_argument("--log", nargs="+")
     s.add_argument("--from-seq", type=int, help="ignore calls before this connector call number (an earlier attempt)")
@@ -1123,7 +1253,7 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--add", nargs="+", metavar="FILE", help="more session records to put in session/")
     args = p.parse_args(argv)
     handlers = {"scan": cmd_scan, "validate": cmd_validate, "project": cmd_project, "doc": cmd_doc, "report": cmd_report,
-                "astrobin": cmd_astrobin, "icons": cmd_icons, "xpsm": cmd_xpsm,
+                "astrobin": cmd_astrobin, "reddit": cmd_reddit, "icons": cmd_icons, "xpsm": cmd_xpsm,
                 "names": cmd_names, "bundle": cmd_bundle}
     return handlers[args.cmd](args)
 
