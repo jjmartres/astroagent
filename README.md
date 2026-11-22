@@ -333,7 +333,7 @@ The tests run `nebulis.py` against a local mock of the Nebulis API, and `astro_p
 
 ## Status
 
-Version 0.5.3 ([releases](https://github.com/jjmartres/astroagent/releases)), run end to end on real data four times: NGC 891 (broadband one-shot colour, 11.5 h), SH2-112 (dual-band D1/D2 on a one-shot colour camera, HOO, 11.8 h), and two Telescope.live data sets, M16 (narrowband mono, SHO and HOO, 24.2 h) and NGC 3521 (LRGB mono, 15.6 h). See `CHANGELOG.md`. To cut a release, bump the version in `.claude-plugin/plugin.json` and add its section to `CHANGELOG.md`: on the push to `main`, `.github/workflows/release.yml` creates the `vX.Y.Z` tag and the GitHub release from the CHANGELOG, and moves the `latest` tag. It can also be run by hand from the Actions tab. Every processing value in the skills is a starting point; tune it on your data and commit the values that work.
+Version 0.6.0 ([releases](https://github.com/jjmartres/astroagent/releases)), run end to end on real data four times: NGC 891 (broadband one-shot colour, 11.5 h), SH2-112 (dual-band D1/D2 on a one-shot colour camera, HOO, 11.8 h), and two Telescope.live data sets, M16 (narrowband mono, SHO and HOO, 24.2 h) and NGC 3521 (LRGB mono, 15.6 h). See `CHANGELOG.md`. To cut a release, bump the version in `.claude-plugin/plugin.json` and add its section to `CHANGELOG.md`: on the push to `main`, `.github/workflows/release.yml` creates the `vX.Y.Z` tag and the GitHub release from the CHANGELOG, and moves the `latest` tag. It can also be run by hand from the Actions tab. Every processing value in the skills is a starting point; tune it on your data and commit the values that work.
 
 ## Credits
 
