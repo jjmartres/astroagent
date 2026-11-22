@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.5.3 (2026-11-22)
+
+`nebulis.py push` of a project archive over 2 GB failed on macOS with `0 NETWORK: cannot reach …: [Errno 22] Invalid argument` and stored nothing (M52, 3.4 GB with a 2.8 GB `.pxiproject`). The whole multipart body was built in memory and sent in one `send()`, which macOS refuses over 2 GiB; the error was reported as a connection failure although the server had been reached.
+
+- `nebulis`:
+  - Uploads (`push`, `image`) never read the whole file. One multipart POST is streamed in 8 MiB writes with an exact `Content-Length`.
+  - Chunked upload through `POST /uploads`, `PUT /uploads/:id/chunks/:index`, `POST /uploads/:id/complete` when the server has it: above 1 GiB, or with `--chunked`. The sha256 is computed first, each chunk is read and sent alone, a failed chunk is retried 3 times with backoff. Progress on stderr at most every 5 % (`uploading M52_…zip 1.2 / 3.4 GB`), for files of 64 MB and more.
+  - A chunked upload that fails or is interrupted (Ctrl-C) stays on the server, with a resume file in the temp folder: `push|image OBJECT --resume UPLOAD_ID` sends only the missing chunks. New exit code 4 for this case.
+  - A server without the chunked API (404/405 on `POST /uploads`) gets the streamed POST; a file over what one POST can carry there (2 GB for an image, 20 GB for an archive) is refused before any byte is sent. The server's `maxSize` is shown (init answer or 413).
+  - Errors: `cannot reach` only when no connection was made; a failure while sending is `upload failed after X of Y: [Errno N] …`. Errors without an HTTP status no longer start with `0`.
+  - `push --bundle`: images, XISF, FITS and everything under `*.pxiproject/` are stored in the zip without compression, text is deflated (ZIP64 on); the free space of the temp folder is checked before zipping; `--tmp DIR` puts the zip elsewhere; the "already stored" check runs before zipping. A zip whose chunked upload stopped is kept for `--resume`.
+- `astro-project`: `bundle` prints the archive size, and a note above 2 GB.
+- `astro-processing`: Stage 12 says large archives are fine, and to resume a stopped push, never zip again.
+- Tests: a local stub of both upload APIs; chunked upload of 300 MB checked byte for byte, resume after a dropped chunk and after Ctrl-C, fallback, refusal, `OSError` during the send, zip members, no `read_bytes`, flat memory; an opt-in test over 2.1 GiB (`ASTROAGENT_TEST_LARGE=1`).
+
 ## 0.5.2 (2026-11-21)
 
 Shorter, more educational replies during processing, each with its options and a reasoned recommendation.

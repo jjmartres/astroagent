@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: jjmartres
-  version: "0.5.2"
+  version: "0.5.3"
 ---
 
 # Nebulis
@@ -38,11 +38,19 @@ Some commands need an **admin** key: `review`, `push` and `image`. A 403 means t
 | `archives OBJECT` | Project archives already stored with the object. |
 | `telescopes` | Telescope profiles: model, optical configurations (focal length, pixel size, sensor size), sensor type, filters. Connection details are never printed. |
 | `site` | The active observing site: name, coordinates, Bortle class. |
-| `push OBJECT --bundle DIR \| --file FILE` | Stores a **project archive** (`.zip`, `.xpsm` or `.pxiproject`) with the object, under Projects (`--bundle` zips a folder). Refuses to overwrite a same-named archive unless `--force`. **One archive per processing run**, named `<OBJECT>_<PALETTE>_<YYYY-MM-DD>_processing.zip` and built by `astro_project.py bundle` (astro-project skill) so every archive has the same layout; not the raw data or scratch. Never zip a JPEG to push it: it would show as a second project, not as an image. |
+| `push OBJECT --bundle DIR [--tmp DIR] \| --file FILE \| --resume UPLOAD_ID [--chunked]` | Stores a **project archive** (`.zip`, `.xpsm` or `.pxiproject`) with the object, under Projects (`--bundle` zips a folder, in `--tmp DIR` when given: put it on a disk with room; it checks the free space first). Refuses to overwrite a same-named archive unless `--force`, before zipping. Images, `.xisf`, `.fits` and everything under `*.pxiproject/` are stored in the zip as they are (no compression), text is deflated. Large archives are fine: above 1 GiB (or with `--chunked`) the file goes through the chunked upload API, and on a Nebulis without it, as one streamed request (archives up to 20 GB). If a chunked upload stops (exit 4: a chunk failed after 3 retries, or Ctrl-C), it stays on the server: run the printed `push OBJECT --resume UPLOAD_ID`, which sends only the missing chunks of the same zip. Never zip again for a resume. **One archive per processing run**, named `<OBJECT>_<PALETTE>_<YYYY-MM-DD>_processing.zip` and built by `astro_project.py bundle` (astro-project skill) so every archive has the same layout; not the raw data or scratch. Never zip a JPEG to push it: it would show as a second project, not as an image. |
 | `images OBJECT` | Finished images stored with the object (processed images), object-level or per session. |
-| `image OBJECT --file FILE [--title T] [--notes N] [--force]` | Adds a finished image (JPG, PNG, TIFF, XISF, FITS) to the **object** (not to a session): it shows in the object's Processed images and in the gallery, dated by its upload day. Use it for the final JPEG at Stage 12. Refuses a same-named image unless `--force`. |
+| `image OBJECT --file FILE \| --resume UPLOAD_ID [--title T] [--notes N] [--force] [--chunked]` | Adds a finished image (JPG, PNG, TIFF, XISF, FITS) to the **object** (not to a session): it shows in the object's Processed images and in the gallery, dated by its upload day. Use it for the final JPEG at Stage 12. Refuses a same-named image unless `--force`. Uploads as `push` does (chunked above 1 GiB, `--resume`); without the chunked API, an image over 2 GB is refused before any byte is sent. |
 
-Exit codes: 0 ok, 1 usage or configuration, 2 plan errors (or unaccepted warnings), 3 API or network error.
+Exit codes:
+
+| Code | Meaning |
+|---|---|
+| 0 | ok |
+| 1 | usage or configuration; a file the server cannot take (already stored, too large for a server without chunked upload, not enough space to zip) |
+| 2 | plan errors, or unaccepted warnings (`plan`, `fetch`) |
+| 3 | API or network error. `cannot reach` means no connection was made (DNS, refused, timeout); `upload failed after X of Y` means the connection broke during a single-request upload: run the same command again |
+| 4 | a chunked upload stopped (a chunk failed after 3 retries, or Ctrl-C); it stays on the server and the resume file is in the temp folder: run the printed `--resume UPLOAD_ID` command |
 
 ## The WBPP export layout
 
