@@ -3,8 +3,11 @@
 Shapes follow nebulis-app/nebulis: server/middleware/apiEnvelope.ts ({ok, data, error}),
 tests/backend/pixinsightContract.test.ts and server/lib/library/stackingExport.ts.
 """
+import hashlib
 import io
 import json
+import os
+import tempfile
 import threading
 import urllib.parse
 import zipfile
@@ -101,7 +104,22 @@ def search_objects(term: str) -> list:
             if any(t in "".join(str(v).split()).lower() for v in [o["id"], o["catalogId"], o["name"], *o["aliases"]])]
 
 
-STATE = {"polls": 0, "reviews": [], "uploads": [], "images": [], "zip": ZIP, "bodies": []}
+STATE = {"polls": 0, "reviews": [], "uploads": [], "images": [], "zip": ZIP, "bodies": [],
+         # Stored files, by original name: {"path", "size", "sha256", "fields", "via": "post" | "chunked"}.
+         "files": {},
+         # Chunked uploads (POST /uploads...): off answers 404 like Nebulis 2.2.
+         "chunked": True, "chunk_size": 8 << 20, "drop_chunks": set(), "sessions": {}, "puts": []}
+SPOOL = tempfile.mkdtemp(prefix="mock-nebulis-")
+
+
+def store(name, path, size, sha, fields, via, target):
+    STATE["files"][name] = {"path": path, "size": size, "sha256": sha, "fields": fields, "via": via}
+    if target == "project-archive":
+        STATE["uploads"].append(name)
+        return {"originalName": name, "size": size, "uploadedAt": "2026-11-06T12:00:00Z", **fields}
+    STATE["images"].append(name)
+    return {"id": "proc_1", "originalName": name, "size": size, "date": None,
+            "uploadedAt": "2026-11-06T12:00:00Z", "source": "user", **fields}
 
 
 class H(BaseHTTPRequestHandler):
@@ -126,8 +144,82 @@ class H(BaseHTTPRequestHandler):
         n = int(self.headers.get("Content-Length") or 0)
         return self.rfile.read(n)
 
+    def multipart(self):
+        """Stream a multipart body to disk: never held in memory, hashed on the way.
+        Returns (fields, field name, filename, path, size, sha256)."""
+        ctype = self.headers.get("Content-Type", "")
+        assert ctype.startswith("multipart/form-data"), ctype
+        boundary = ctype.split("boundary=")[1].encode()
+        tail = b"\r\n--" + boundary + b"--\r\n"
+        left = int(self.headers["Content-Length"])
+        head = b""
+        while b'filename="' not in head or b"\r\n\r\n" not in head.split(b'filename="', 1)[1]:
+            block = self.rfile.read(min(65536, left))
+            assert block, "body ended inside the multipart head"
+            left -= len(block)
+            head += block
+        before, after = head.split(b'filename="', 1)
+        filename = after.split(b'"', 1)[0].decode()
+        field = before.rsplit(b'name="', 1)[1].split(b'"', 1)[0].decode()
+        rest = after.split(b"\r\n\r\n", 1)[1]
+        fields = {}
+        for part in before.split(b"--" + boundary)[1:-1]:
+            hdr, _, val = part.partition(b"\r\n\r\n")
+            fields[hdr.split(b'name="')[1].split(b'"')[0].decode()] = val[:-2].decode()
+        fd, path = tempfile.mkstemp(dir=SPOOL)
+        h, size, pending = hashlib.sha256(), 0, rest
+        with os.fdopen(fd, "wb") as fh:
+            while True:
+                if len(pending) > len(tail):
+                    out = pending[:-len(tail)]
+                    fh.write(out)
+                    h.update(out)
+                    size += len(out)
+                    pending = pending[-len(tail):]
+                if not left:
+                    break
+                block = self.rfile.read(min(8 << 20, left))
+                assert block, "body shorter than its Content-Length"
+                left -= len(block)
+                pending += block
+        assert pending == tail, pending
+        return fields, field, filename, path, size, h.hexdigest()
+
+    def chunk_put(self, uid, index):
+        sess = STATE["sessions"].get(uid)
+        if sess is None:
+            return self.send(404, err=("NOT_FOUND", "no such upload"))
+        n = int(self.headers["Content-Length"])
+        data = self.rfile.read(n)
+        STATE["puts"].append(index)
+        if index in STATE["drop_chunks"]:
+            return self.send(500, err=("CHUNK_LOST", "chunk dropped by the stub"))
+        rng = self.headers["Content-Range"]  # bytes start-end/total
+        start, end = (int(x) for x in rng.split()[1].split("/")[0].split("-"))
+        assert int(rng.split("/")[1]) == sess["size"], rng
+        assert start == index * sess["chunkSize"] and end - start + 1 == len(data), (rng, index, len(data))
+        with open(sess["path"], "r+b") as fh:
+            fh.seek(start)
+            fh.write(data)
+        sess["received"].append([start, end])
+        return self.send(200, {"index": index, "received": len(data)})
+
+    def do_DELETE(self):
+        if not self.authed():
+            return
+        uid = self.path.split("/uploads/")[1]
+        STATE["sessions"].pop(uid, None)
+        return self.send(200, {"deleted": uid})
+
     def do_GET(self):
         p = self.path.split("?")[0]
+        if p.startswith("/api/v1/uploads/") and STATE["chunked"]:
+            if not self.authed():
+                return
+            sess = STATE["sessions"].get(p.rsplit("/", 1)[1])
+            if sess is None:
+                return self.send(404, err=("NOT_FOUND", "no such upload"))
+            return self.send(200, {"received": sess["received"], "size": sess["size"], "status": sess["status"]})
         if p == "/api/v1/meta/version":
             return self.send(200, {"version": "2.2.0"})
         if p.startswith("/api/v1/library/download/tmp/"):
@@ -185,6 +277,48 @@ class H(BaseHTTPRequestHandler):
         p = self.path
         if not self.authed():
             return
+        if p == f"/api/v1/library/objects/{OBJ}/project-archives":
+            fields, field, name, path, size, sha = self.multipart()
+            if field != "archive" or not name.endswith((".zip", ".xpsm", ".pxiproject")):
+                return self.send(400, err=("NO_ARCHIVE", "bad type"))
+            return self.send(200, store(name, path, size, sha, fields, "post", "project-archive"))
+        if p == f"/api/v1/library/objects/{OBJ}/processed-images":
+            fields, field, name, path, size, sha = self.multipart()
+            if field != "image":
+                return self.send(400, err=("NO_IMAGE", "No image file provided"))
+            if size > 2 << 30:
+                return self.send(413, err=("LIMIT_FILE_SIZE", "File is too large for this upload endpoint."))
+            return self.send(200, store(name, path, size, sha, fields, "post", "processed-image"))
+        if p.startswith("/api/v1/uploads"):
+            if not STATE["chunked"]:
+                self.body()
+                return self.send(404, err=("NOT_FOUND", "no route"))
+            if p == "/api/v1/uploads":
+                req = json.loads(self.body())
+                assert req["target"] in ("project-archive", "processed-image"), req
+                assert req["objectId"] == OBJ, req
+                uid = f"up_{len(STATE['sessions']) + 1}_{os.urandom(3).hex()}"
+                fd, path = tempfile.mkstemp(dir=SPOOL)
+                os.close(fd)
+                STATE["sessions"][uid] = {**req, "path": path, "received": [], "status": "open",
+                                          "chunkSize": STATE["chunk_size"]}
+                return self.send(200, {"uploadId": uid, "chunkSize": STATE["chunk_size"], "maxSize": 20 << 30,
+                                       "expiresAt": "2026-11-23T12:00:00Z"})
+            if p.endswith("/complete"):
+                self.body()
+                uid = p.split("/")[-2]
+                sess = STATE["sessions"][uid]
+                h, size = hashlib.sha256(), 0
+                with open(sess["path"], "rb") as fh:
+                    for block in iter(lambda: fh.read(8 << 20), b""):
+                        h.update(block)
+                        size += len(block)
+                if size != sess["size"] or h.hexdigest() != sess["sha256"]:
+                    return self.send(409, err=("CHECKSUM_MISMATCH", f"got {size} bytes, sha256 {h.hexdigest()}"))
+                sess["status"] = "complete"
+                fields = {k: sess[k] for k in ("title", "notes", "software") if k in sess}
+                return self.send(200, store(sess["filename"], sess["path"], size, h.hexdigest(), fields,
+                                            "chunked", sess["target"]))
         raw = self.body()
         if p == f"/api/v1/library/objects/{OBJ}/stacking-export/plan":
             req = json.loads(raw)
@@ -202,28 +336,14 @@ class H(BaseHTTPRequestHandler):
             STATE["bodies"].append(("export", json.loads(raw)))
             STATE["zip"] = ZIP2
             return self.send(200, {"jobId": "job2"})
-        if p == f"/api/v1/library/objects/{OBJ}/project-archives":
-            ctype = self.headers.get("Content-Type", "")
-            assert ctype.startswith("multipart/form-data"), ctype
-            name = raw.split(b'filename="')[1].split(b'"')[0].decode()
-            if not name.endswith((".zip", ".xpsm", ".pxiproject")):
-                return self.send(400, err=("NO_ARCHIVE", "bad type"))
-            STATE["uploads"].append(name)
-            return self.send(200, {"originalName": name, "size": len(raw), "uploadedAt": "2026-11-06T12:00:00Z"})
-        if p == f"/api/v1/library/objects/{OBJ}/processed-images":
-            ctype = self.headers.get("Content-Type", "")
-            assert ctype.startswith("multipart/form-data"), ctype
-            if b'name="image"; filename="' not in raw:
-                return self.send(400, err=("NO_IMAGE", "No image file provided"))
-            name = raw.split(b'filename="')[1].split(b'"')[0].decode()
-            STATE["images"].append(name)
-            return self.send(200, {"id": "proc_1", "originalName": name, "size": len(raw), "date": None,
-                                   "uploadedAt": "2026-11-06T12:00:00Z", "source": "user"})
         return self.send(404, err=("NOT_FOUND", "no route"))
 
     def do_PUT(self):
         if not self.authed():
             return
+        if self.path.startswith("/api/v1/uploads/") and "/chunks/" in self.path and STATE["chunked"]:
+            uid, index = self.path.split("/uploads/")[1].split("/chunks/")
+            return self.chunk_put(uid, int(index))
         req = json.loads(self.body())
         if self.path == "/api/v1/library/frame-analysis/review":
             STATE["reviews"].append(req)

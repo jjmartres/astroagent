@@ -55,7 +55,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SKILL = HERE.parent
 SCHEMA = SKILL / "reference" / "rig.schema.json"
-VERSION = "0.5.2"
+VERSION = "0.5.3"
 FITS_EXT = (".fit", ".fits", ".fts")
 
 
@@ -1056,7 +1056,12 @@ def cmd_bundle(args) -> int:
     env = (ws.load("report.json") or {}).get("environment") or {}
     software = ", ".join(x for x in (f"PixInsight {env['PixInsight']}" if env.get("PixInsight") else "PixInsight",
                                       f"astroagent {env.get('astroagent') or VERSION}") if x)
-    print(f"archive: {n['archive']} ({len(placed)} entries in {push})")
+    total = sum(f.stat().st_size for f in push.rglob("*") if f.is_file())
+    print(f"archive: {n['archive']} ({len(placed)} entries in {push}, {total / (1 << 30):.2f} GB)")
+    if total > 2 << 30:
+        print("note: over 2 GB: nebulis.py push sends it with the chunked upload API (Nebulis ≥ 2.3.0); "
+              "older servers get one streamed request (archives up to 20 GB). If the upload stops, "
+              "resume it with the printed --resume command: never zip again.")
     print(f"push: nebulis.py push {n['object']} --bundle {push} --name {n['archive']} "
           f"--title \"{n['title']}\" --software \"{software}\"")
     return 0

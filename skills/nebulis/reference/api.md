@@ -30,6 +30,22 @@ Source: nebulis-app/nebulis, `server/routes/library.ts`, `server/routes/meta.ts`
 | GET | `/library/objects/:id/processed-images` | | `[{ id, objectId, date \| null, filename, originalName, title, notes, size, uploadedAt, source, url, thumbUrl, … }]`: finished images of the object, every session and object-level |
 | POST | `/library/objects/:id/processed-images` (admin) | multipart: `image` (JPG, PNG, WebP, TIFF, XISF, FITS…; up to 2 GB), `title`, `notes` | the stored record, `date: null` (object-level: shown in the object's Processed images and the gallery) |
 
+The two multipart POSTs stream to the server's disk (multer `diskStorage`); the limits are 20 GB for a project archive, 2 GB for a processed image (413 `LIMIT_FILE_SIZE` above). `nebulis.py` streams the body too, in 8 MiB writes with an exact `Content-Length`.
+
+## Chunked uploads
+
+For large files (`nebulis.py` uses them above 1 GiB, or with `--chunked`). Admin key on every call. A server without them answers 404 or 405 on `POST /uploads`, and `nebulis.py` falls back to the multipart POST.
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| POST | `/uploads` | `{ target: "project-archive" \| "processed-image", objectId, filename, size, sha256, title, notes, software }` | `{ uploadId, chunkSize, maxSize, expiresAt }`; 413 with `maxSize` when `size` is over it |
+| PUT | `/uploads/:uploadId/chunks/:index` | `application/octet-stream`, `Content-Range: bytes start-end/total` (end inclusive); chunk *i* starts at `i × chunkSize`, the last one is shorter | |
+| GET | `/uploads/:uploadId` | | `{ received: [[start, end], …], size, status }`: byte ranges the server holds, end inclusive |
+| POST | `/uploads/:uploadId/complete` | | the same record as the multipart POST of the target; the server checks the size and the sha256 |
+| DELETE | `/uploads/:uploadId` | | drops the upload (`nebulis.py` never calls it: a stopped upload stays resumable until `expiresAt`) |
+
+`nebulis.py` retries a failed chunk 3 times (1, 2, 4 s), then stops with exit 4 and keeps `<temp dir>/nebulis-upload-<uploadId>.json` (path, size, mtime, sha256, chunk size; never the key). `--resume UPLOAD_ID` reads it, calls `GET /uploads/:uploadId`, sends the missing chunks and completes.
+
 ## Plan group
 
 ```

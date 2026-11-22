@@ -30,24 +30,41 @@ Commands:
   archives OBJECT                         project archives stored with the object
   telescopes                              telescope profiles: model, optical configs, filters
   site                                    the active observing site: coordinates, Bortle class
-  push OBJECT (--file FILE | --bundle DIR) [--title T] [--notes N] [--software S]
+  push OBJECT (--file FILE | --bundle DIR [--tmp DIR] | --resume UPLOAD_ID) [--title T] [--notes N]
+       [--software S] [--chunked]
                                           upload a .zip/.xpsm/.pxiproject (admin key); --bundle
-                                          zips a folder first. One archive per processing run.
+                                          zips a folder first (in --tmp DIR when given). One archive
+                                          per processing run.
   images OBJECT                           finished images stored with the object (processed images)
-  image OBJECT --file FILE [--title T] [--notes N] [--force]
+  image OBJECT (--file FILE | --resume UPLOAD_ID) [--title T] [--notes N] [--force] [--chunked]
                                           add a finished image (JPG/PNG/TIFF/XISF/FITS) to the object,
                                           not to a session (admin key); it shows in the object's
                                           Processed images and in the gallery
 
-Exit codes: 0 ok, 1 usage or configuration error, 2 the plan has errors (plan/fetch),
-3 API or network error.
+Uploads (push, image): files over 1 GiB, or any file with --chunked, go through the chunked upload
+API (POST /uploads, one PUT per chunk, POST /uploads/ID/complete), which a failed or interrupted
+upload can resume with --resume UPLOAD_ID: only the missing chunks are sent. A server without that
+API (404 or 405 on POST /uploads) gets one streamed multipart POST instead. The file is always read
+a chunk at a time, never whole.
+
+Exit codes:
+  0  ok
+  1  usage or configuration error; a file the server cannot take (too large for it, already stored)
+  2  the plan has errors or unaccepted warnings (plan, fetch)
+  3  API or network error ("cannot reach" = no connection at all; "upload failed after X of Y" = the
+     connection broke during a single-request upload, start it again)
+  4  chunked upload stopped (failed after retries, or Ctrl-C): it stays on the server, resume it
+     with the printed --resume command
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
+import http.client
 import json
 import os
 import shutil
+import socket
 import sys
 import tempfile
 import time
@@ -65,9 +82,37 @@ USER_AGENT = "nebulis-cli/1.0 (astroagent)"
 
 
 class ApiError(Exception):
-    def __init__(self, status: int, code: str, message: str):
+    def __init__(self, status: int, code: str, message: str, max_size: int | None = None):
         super().__init__(f"{status} {code}: {message}")
-        self.status, self.code, self.message = status, code, message
+        self.status, self.code, self.message, self.max_size = status, code, message, max_size
+
+
+class NoChunkedApi(Exception):
+    """The server answered 404 or 405 on POST /uploads: a Nebulis without chunked uploads."""
+
+
+class UploadStopped(Exception):
+    """A chunked upload stopped part way (chunk failed after its retries, or Ctrl-C). It stays on
+    the server and in the resume file; --resume UPLOAD_ID sends what is missing."""
+
+    def __init__(self, upload_id: str, reason: str, done: int, size: int):
+        super().__init__(reason)
+        self.upload_id, self.reason, self.done, self.size = upload_id, reason, done, size
+
+
+# Uploads. Above CHUNKED_ABOVE the chunked API is used when the server has it.
+CHUNKED_ABOVE = 1 << 30
+# The first Nebulis release with POST /uploads (named in the refusal message).
+CHUNKED_SINCE = "2.3.0"
+# Largest file one multipart POST may carry, per target, when the server has no chunked API.
+# Nebulis (server/routes/library.ts) streams these POSTs to disk: processed images are capped at
+# 2 GB, project archives at 20 GB. The client itself streams the body, so the old macOS limit of
+# one send() under 2 GiB no longer applies.
+SINGLE_POST_LIMIT = {"processed-image": 2 << 30, "project-archive": 20 << 30}
+STREAM_BLOCK = 8 << 20          # bytes per write of a streamed single POST
+PROGRESS_FROM = 64 << 20        # smaller files print no progress (same output as before)
+CHUNK_RETRIES = 3
+RETRY_BASE = float(os.environ.get("ASTROAGENT_NEBULIS_RETRY_BASE", "1"))  # seconds: 1, 2, 4
 
 
 # ─── configuration ──────────────────────────────────────────────────────────
@@ -132,7 +177,20 @@ class Client:
         except urllib.error.HTTPError as e:
             raw, status = e.read(), e.code
         except urllib.error.URLError as e:
-            raise ApiError(0, "NETWORK", f"cannot reach {self.base}: {e.reason}") from None
+            raise self._network_error(e.reason) from None
+        except OSError as e:  # the connection broke after it was made
+            raise ApiError(0, "NETWORK", f"request to {self.base} failed: {e}") from None
+        return self._parse(status, raw)
+
+    def _network_error(self, reason: object) -> ApiError:
+        """"cannot reach" only when no connection was made: DNS, refused, timeout on connect."""
+        if isinstance(reason, (socket.gaierror, ConnectionRefusedError, socket.timeout, TimeoutError)) \
+                or isinstance(reason, str):
+            return ApiError(0, "NETWORK", f"cannot reach {self.base}: {reason}")
+        return ApiError(0, "NETWORK", f"request to {self.base} failed: {reason}")
+
+    @staticmethod
+    def _parse(status: int, raw: bytes):
         try:
             env = json.loads(raw.decode("utf-8") or "null")
         except ValueError:
@@ -141,10 +199,60 @@ class Client:
             if env.get("ok"):
                 return env.get("data")
             err = env.get("error") or {}
-            raise ApiError(status, err.get("code", "ERROR"), err.get("message", "request failed"))
+            data = env.get("data") if isinstance(env.get("data"), dict) else {}
+            max_size = err.get("maxSize") or data.get("maxSize") or env.get("maxSize")
+            raise ApiError(status, err.get("code", "ERROR"), err.get("message", "request failed"), max_size)
         if status >= 400:
-            raise ApiError(status, "HTTP_ERROR", f"HTTP {status}")
+            max_size = env.get("maxSize") if isinstance(env, dict) else None
+            raise ApiError(status, "HTTP_ERROR", f"HTTP {status}", max_size)
         return env
+
+    # Uploads go through http.client: the body is written in blocks with an exact Content-Length,
+    # and a failure to connect is told apart from a failure while sending.
+
+    def _connect(self) -> http.client.HTTPConnection:
+        u = urllib.parse.urlsplit(self.base)
+        cls = http.client.HTTPSConnection if u.scheme == "https" else http.client.HTTPConnection
+        conn = cls(u.hostname, u.port, timeout=self.timeout)
+        try:
+            conn.connect()
+        except OSError as e:
+            conn.close()
+            raise ApiError(0, "NETWORK", f"cannot reach {self.base}: {e}") from None
+        return conn
+
+    def _url_path(self, path: str) -> str:
+        prefix = urllib.parse.urlsplit(self.base).path.rstrip("/")
+        return prefix + (path if path.startswith("/api/") else "/api/v1" + path)
+
+    def _headers(self, conn: http.client.HTTPConnection, ctype: str, length: int, extra: dict | None = None) -> None:
+        conn.putheader("User-Agent", USER_AGENT)
+        conn.putheader("Accept", "application/json")
+        conn.putheader("X-API-Key", self.key)
+        conn.putheader("Content-Type", ctype)
+        conn.putheader("Content-Length", str(length))
+        for k, v in (extra or {}).items():
+            conn.putheader(k, v)
+        conn.endheaders()
+
+    def _answer(self, conn: http.client.HTTPConnection, wait: float):
+        if conn.sock is not None:
+            conn.sock.settimeout(wait)
+        resp = conn.getresponse()
+        return resp.status, resp.read()
+
+    def put_bytes(self, path: str, data: bytes, headers: dict) -> object:
+        conn = self._connect()
+        try:
+            conn.putrequest("PUT", self._url_path(path), skip_accept_encoding=True)
+            self._headers(conn, "application/octet-stream", len(data), headers)
+            conn.send(data)
+            status, raw = self._answer(conn, self.timeout)
+        except OSError as e:
+            raise ApiError(0, "UPLOAD_FAILED", f"chunk upload failed: {e}") from None
+        finally:
+            conn.close()
+        return self._parse(status, raw)
 
     def download(self, path: str, dest: Path, auth: bool = False) -> int:
         req = self._request("GET", path, auth=auth)
@@ -164,20 +272,214 @@ class Client:
             raise ApiError(0, "NETWORK", f"download failed: {e.reason}") from None
 
     def upload(self, path: str, file_path: Path, fields: dict[str, str], field: str = "archive"):
+        """One multipart POST, streamed: the preamble, the file in STREAM_BLOCK writes, the epilogue,
+        with an exact Content-Length. The file is never held in memory."""
         boundary = f"----nebulis{uuid.uuid4().hex}"
         parts: list[bytes] = []
         for k, v in fields.items():
             if v:
                 parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode())
-        head = (f'--{boundary}\r\nContent-Disposition: form-data; name="{field}"; filename="{file_path.name}"\r\n'
-                f"Content-Type: application/octet-stream\r\n\r\n").encode()
-        body = b"".join(parts) + head + file_path.read_bytes() + f"\r\n--{boundary}--\r\n".encode()
-        req = self._request("POST", path, body, f"multipart/form-data; boundary={boundary}")
-        return self._send(req)
+        head = b"".join(parts) + (
+            f'--{boundary}\r\nContent-Disposition: form-data; name="{field}"; filename="{file_path.name}"\r\n'
+            f"Content-Type: application/octet-stream\r\n\r\n").encode()
+        tail = f"\r\n--{boundary}--\r\n".encode()
+        size = file_path.stat().st_size
+        progress = Progress(file_path.name, size)
+        conn = self._connect()
+        sent = 0
+        try:
+            try:
+                conn.putrequest("POST", self._url_path(path), skip_accept_encoding=True)
+                self._headers(conn, f"multipart/form-data; boundary={boundary}", len(head) + size + len(tail))
+                conn.send(head)
+                with open(file_path, "rb") as fh:
+                    while True:
+                        block = fh.read(STREAM_BLOCK)
+                        if not block:
+                            break
+                        conn.send(block)
+                        sent += len(block)
+                        progress.update(sent)
+                conn.send(tail)
+            except OSError as e:
+                # The server may have refused the upload and closed (413, 507): read its answer.
+                try:
+                    status, raw = self._answer(conn, 5)
+                except Exception:
+                    status, raw = 0, b""
+                if status >= 400:
+                    self._parse(status, raw)
+                raise ApiError(0, "UPLOAD_FAILED",
+                               f"upload failed after {fmt_bytes(sent)} of {fmt_bytes(size)}: {e}") from None
+            try:
+                # The server moves the file into the library before it answers: allow it time.
+                status, raw = self._answer(conn, max(self.timeout, 600))
+            except OSError as e:
+                raise ApiError(0, "UPLOAD_FAILED",
+                               f"upload sent ({fmt_bytes(size)}) but no answer came: {e}") from None
+        finally:
+            conn.close()
+        return self._parse(status, raw)
+
+    # ── chunked upload (POST /uploads, PUT …/chunks/:index, POST …/complete) ──
+
+    def upload_chunked(self, target: str, object_id: str, file_path: Path, fields: dict[str, str],
+                       command: str, temporary: bool = False):
+        size = file_path.stat().st_size
+        if size >= PROGRESS_FROM:
+            print(f"checksumming {file_path.name}", file=sys.stderr)
+        digest = sha256_file(file_path)
+        body = {"target": target, "objectId": object_id, "filename": file_path.name, "size": size,
+                "sha256": digest, **{k: v for k, v in fields.items() if v}}
+        try:
+            init = self.call("POST", "/uploads", body)
+        except ApiError as e:
+            if e.status in (404, 405):
+                raise NoChunkedApi() from None
+            raise
+        state = {"uploadId": init["uploadId"], "target": target, "objectId": object_id, "command": command,
+                 "path": str(file_path), "size": size, "sha256": digest, "mtime": file_path.stat().st_mtime,
+                 "chunkSize": int(init["chunkSize"]), "maxSize": init.get("maxSize"),
+                 "expiresAt": init.get("expiresAt"), "temporary": temporary}
+        write_resume(state)
+        n = -(-size // state["chunkSize"])
+        print(f"upload {state['uploadId']}: {n} chunk(s) of {fmt_bytes(state['chunkSize'])}"
+              + (f", server limit {fmt_bytes(state['maxSize'])}" if state.get("maxSize") else ""), file=sys.stderr)
+        return self._finish(state, list(range(n)), 0)
+
+    def resume_chunked(self, upload_id: str, target: str, object_id: str):
+        state = read_resume(upload_id)
+        if state.get("target") != target or state.get("objectId") != object_id:
+            die(f"upload {upload_id} is a {state.get('target')} of {state.get('objectId')}, "
+                f"not a {target} of {object_id}", 1)
+        fpath = Path(state["path"])
+        if not fpath.is_file() or fpath.stat().st_size != state["size"] or fpath.stat().st_mtime != state.get("mtime"):
+            die(f"{fpath} is missing or changed since the upload started; start it again", 1)
+        info = self.call("GET", f"/uploads/{q(upload_id)}") or {}
+        status = str(info.get("status") or "")
+        if status in ("expired", "cancelled", "canceled", "aborted", "failed"):
+            remove_resume(upload_id)
+            die(f"upload {upload_id} is {status} on the server; send the file again with --file {fpath}", 3)
+        cs = int(info.get("chunkSize") or state["chunkSize"])
+        state["chunkSize"] = cs
+        ranges = merge_ranges(info.get("received") or [])
+        n = -(-state["size"] // cs)
+        missing = [i for i in range(n) if not covered(ranges, i * cs, min((i + 1) * cs, state["size"]) - 1)]
+        done = state["size"] - sum(min((i + 1) * cs, state["size"]) - i * cs for i in missing)
+        print(f"resuming upload {upload_id}: {fmt_pair(done, state['size'])} on the server, "
+              f"{len(missing)} chunk(s) to send", file=sys.stderr)
+        return self._finish(state, missing, done)
+
+    def _finish(self, state: dict, indices: list[int], done: int):
+        uid, size, cs = state["uploadId"], state["size"], state["chunkSize"]
+        progress = Progress(Path(state["path"]).name, size, done)
+        try:
+            with open(state["path"], "rb") as fh:
+                for i in indices:
+                    start = i * cs
+                    fh.seek(start)
+                    data = fh.read(min(cs, size - start))
+                    end = start + len(data) - 1
+                    headers = {"Content-Range": f"bytes {start}-{end}/{size}"}
+                    for attempt in range(CHUNK_RETRIES + 1):
+                        try:
+                            self.put_bytes(f"/uploads/{q(uid)}/chunks/{i}", data, headers)
+                            break
+                        except ApiError as e:
+                            retry = e.status == 0 or e.status >= 500 or e.status in (408, 429)
+                            if attempt == CHUNK_RETRIES or not retry:
+                                raise UploadStopped(uid, f"chunk {i} failed: {e}", done, size) from None
+                            wait = RETRY_BASE * (2 ** attempt)
+                            print(f"  chunk {i} failed ({e}); retry {attempt + 1}/{CHUNK_RETRIES} in {wait:g}s",
+                                  file=sys.stderr)
+                            time.sleep(wait)
+                    done += len(data)
+                    progress.update(done)
+        except KeyboardInterrupt:
+            raise UploadStopped(uid, "interrupted", done, size) from None
+        saved, self.timeout = self.timeout, max(self.timeout, 600)  # the server checks the sha256
+        try:
+            rec = self.call("POST", f"/uploads/{q(uid)}/complete")
+        except ApiError as e:
+            if e.status == 0 or e.status >= 500:
+                raise UploadStopped(uid, f"complete failed: {e}", done, size) from None
+            raise
+        finally:
+            self.timeout = saved
+        remove_resume(uid)
+        if state.get("temporary"):
+            shutil.rmtree(Path(state["path"]).parent, ignore_errors=True)
+        return rec
+
+    def server_version(self) -> str:
+        try:
+            meta = self.call("GET", "/meta/version")
+            return str(meta.get("version") if isinstance(meta, dict) else meta)
+        except ApiError:
+            return "(unknown version)"
 
 
 def q(s: str) -> str:
     return urllib.parse.quote(s, safe="")
+
+
+def sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        while True:
+            block = fh.read(STREAM_BLOCK)
+            if not block:
+                return h.hexdigest()
+            h.update(block)
+
+
+def resume_path(upload_id: str) -> Path:
+    safe = "".join(ch for ch in upload_id if ch.isalnum() or ch in "-_")
+    return Path(tempfile.gettempdir()) / f"nebulis-upload-{safe}.json"
+
+
+def write_resume(state: dict) -> None:
+    """The resume file: path, size, sha256 and chunk size of the upload. Never the key."""
+    resume_path(state["uploadId"]).write_text(json.dumps(state, indent=2), encoding="utf-8")
+
+
+def read_resume(upload_id: str) -> dict:
+    p = resume_path(upload_id)
+    if not p.is_file():
+        die(f"no resume file for upload {upload_id} ({p}); start the upload again", 1)
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+def remove_resume(upload_id: str) -> None:
+    try:
+        resume_path(upload_id).unlink()
+    except OSError:
+        pass
+
+
+def merge_ranges(received: list) -> list[tuple[int, int]]:
+    """Byte ranges the server holds, inclusive: [start, end], {"start", "end"} or "start-end"."""
+    out: list[tuple[int, int]] = []
+    for r in received:
+        if isinstance(r, dict):
+            a, b = r.get("start"), r.get("end")
+        elif isinstance(r, str):
+            a, _, b = r.partition("-")
+        else:
+            a, b = r[0], r[1]
+        out.append((int(a), int(b)))
+    out.sort()
+    merged: list[tuple[int, int]] = []
+    for a, b in out:
+        if merged and a <= merged[-1][1] + 1:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], b))
+        else:
+            merged.append((a, b))
+    return merged
+
+
+def covered(ranges: list[tuple[int, int]], start: int, end: int) -> bool:
+    return any(a <= start and end <= b for a, b in ranges)
 
 
 # ─── helpers ────────────────────────────────────────────────────────────────
@@ -194,6 +496,31 @@ def fmt_bytes(n: float | None) -> str:
             return f"{n:.0f} {unit}" if unit == "B" else f"{n:.1f} {unit}"
         n /= 1024
     return f"{n:.1f} TB"
+
+
+def fmt_pair(done: float, total: float) -> str:
+    """"1.2 / 3.4 GB": both in the unit of the total."""
+    unit, scale = "B", 1
+    for u in ("KB", "MB", "GB", "TB"):
+        if total < scale * 1024:
+            break
+        unit, scale = u, scale * 1024
+    return f"{done / scale:.1f} / {total / scale:.1f} {unit}"
+
+
+class Progress:
+    """Upload progress on stderr, at most every 5 %; nothing for files under PROGRESS_FROM."""
+
+    def __init__(self, name: str, total: int, done: int = 0):
+        self.name, self.total = name, total
+        self.step = max(total // 20, 1)
+        self.next = done + self.step
+
+    def update(self, done: int) -> None:
+        if self.total < PROGRESS_FROM or done < self.next:
+            return
+        print(f"uploading {self.name} {fmt_pair(done, self.total)}", file=sys.stderr)
+        self.next = done + self.step
 
 
 def resolve_dates(c: Client, obj: str, args) -> list[str]:
@@ -511,34 +838,93 @@ def cmd_archives(c: Client, args):
     out(args, arcs, "\n".join(rows) or "no project archives")
 
 
+# Members stored as they are in a --bundle zip: already compressed, or large binary data that
+# DEFLATE barely shrinks and spends minutes on. Everything else (text, JSON, HTML) is deflated.
+STORED_SUFFIXES = {".xisf", ".tif", ".tiff", ".jpg", ".jpeg", ".png", ".fits", ".fit", ".fts", ".zip"}
+
+
+def zip_method(rel: Path) -> int:
+    if rel.suffix.lower() in STORED_SUFFIXES or any(part.lower().endswith(".pxiproject") for part in rel.parts[:-1]):
+        return zipfile.ZIP_STORED
+    return zipfile.ZIP_DEFLATED
+
+
+def zip_bundle(src: Path, dest: Path) -> None:
+    with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED, allowZip64=True) as zf:
+        for p in sorted(src.rglob("*")):
+            if p.is_file():
+                rel = p.relative_to(src)
+                zf.write(p, rel, compress_type=zip_method(rel))
+
+
+def send_file(c: Client, args, target: str, endpoint: str, fpath: Path, fields: dict[str, str],
+              field: str, temporary: bool = False):
+    """Chunked upload above CHUNKED_ABOVE or with --chunked, when the server has it; otherwise one
+    streamed POST, refused before any byte is sent when the file is over what one POST can carry."""
+    size = fpath.stat().st_size
+    if args.chunked or size > CHUNKED_ABOVE:
+        try:
+            return c.upload_chunked(target, args.object, fpath, fields, args.cmd, temporary)
+        except NoChunkedApi:
+            print("note: this Nebulis has no chunked upload API; sending the file in one request", file=sys.stderr)
+    limit = SINGLE_POST_LIMIT[target]
+    if size > limit:
+        die(f"Nebulis {c.server_version()} has no chunked upload; files over {fmt_bytes(limit)} need "
+            f"Nebulis ≥ {CHUNKED_SINCE}", 1)
+    return c.upload(endpoint, fpath, fields, field)
+
+
+def bundle_size(src: Path) -> int:
+    return sum(p.stat().st_size for p in src.rglob("*") if p.is_file())
+
+
 def cmd_push(c: Client, args):
     allowed = (".zip", ".xpsm", ".pxiproject")
-    cleanup = None
+    if args.resume:
+        rec = c.resume_chunked(args.resume, "project-archive", args.object)
+        return out(args, rec, f"stored {rec.get('originalName')} ({fmt_bytes(rec.get('size'))}) with {args.object}")
     if args.bundle:
         src = Path(args.bundle).expanduser().resolve()
         if not src.is_dir():
             die(f"{src} is not a folder", 1)
-        cleanup = tempfile.TemporaryDirectory(prefix="nebulis-push-")
         name = args.name or f"{args.object}_{time.strftime('%Y-%m-%d')}_processing.zip"
-        fpath = Path(cleanup.name) / name
-        with zipfile.ZipFile(fpath, "w", zipfile.ZIP_DEFLATED) as zf:
-            for p in sorted(src.rglob("*")):
-                if p.is_file():
-                    zf.write(p, p.relative_to(src))
     else:
         fpath = Path(args.file).expanduser().resolve()
         if not fpath.is_file():
             die(f"{fpath} not found", 1)
-    if fpath.suffix.lower() not in allowed:
+        name = fpath.name
+    if Path(name).suffix.lower() not in allowed:
         die(f"Nebulis accepts only {', '.join(allowed)} project archives; add a finished image with the image command", 1)
+    # Checked before zipping: a multi-GB zip is not built for nothing.
     existing = c.call("GET", f"/library/objects/{q(args.object)}/project-archives") or []
-    if any(a.get("originalName") == fpath.name for a in existing) and not args.force:
-        die(f"{fpath.name} is already stored with {args.object}; rename it or pass --force", 1)
+    if any(a.get("originalName") == name for a in existing) and not args.force:
+        die(f"{name} is already stored with {args.object}; rename it or pass --force", 1)
+    workdir = None
+    if args.bundle:
+        tmp_root = Path(args.tmp).expanduser().resolve() if args.tmp else Path(tempfile.gettempdir())
+        if not tmp_root.is_dir():
+            die(f"{tmp_root} is not a folder", 1)
+        need = bundle_size(src)
+        free = shutil.disk_usage(tmp_root).free
+        if free < need + (64 << 20):
+            die(f"not enough space in {tmp_root} to zip {src.name}: {fmt_bytes(need)} needed, "
+                f"{fmt_bytes(free)} free; pass --tmp DIR on a disk with room", 1)
+        workdir = Path(tempfile.mkdtemp(prefix="nebulis-push-", dir=tmp_root))
+        fpath = workdir / name
+        print(f"zipping {src} ({fmt_bytes(need)})", file=sys.stderr)
+        zip_bundle(src, fpath)
     print(f"uploading {fpath.name} ({fmt_bytes(fpath.stat().st_size)})", file=sys.stderr)
-    rec = c.upload(f"/library/objects/{q(args.object)}/project-archives", fpath,
-                   {"title": args.title or fpath.name, "notes": args.notes or "", "software": args.software})
-    if cleanup:
-        cleanup.cleanup()
+    keep = False
+    try:
+        rec = send_file(c, args, "project-archive", f"/library/objects/{q(args.object)}/project-archives", fpath,
+                        {"title": args.title or fpath.name, "notes": args.notes or "", "software": args.software},
+                        "archive", temporary=workdir is not None)
+    except UploadStopped:
+        keep = True  # the zip is what --resume sends: never zip again
+        raise
+    finally:
+        if workdir and not keep:
+            shutil.rmtree(workdir, ignore_errors=True)
     out(args, rec, f"stored {rec.get('originalName')} ({fmt_bytes(rec.get('size'))}) with {args.object}")
 
 
@@ -554,6 +940,9 @@ def cmd_images(c: Client, args):
 
 def cmd_image(c: Client, args):
     """Add a finished image to the object (its Processed images and the gallery), not to a session."""
+    if args.resume:
+        rec = c.resume_chunked(args.resume, "processed-image", args.object)
+        return out(args, rec, f"added image {rec.get('originalName')} ({fmt_bytes(rec.get('size'))}) to {args.object}")
     fpath = Path(args.file).expanduser().resolve()
     if not fpath.is_file():
         die(f"{fpath} not found", 1)
@@ -564,8 +953,8 @@ def cmd_image(c: Client, args):
     if any(i.get("originalName") == fpath.name for i in existing) and not args.force:
         die(f"{fpath.name} is already an image of {args.object}; rename it or pass --force", 1)
     print(f"uploading {fpath.name} ({fmt_bytes(fpath.stat().st_size)})", file=sys.stderr)
-    rec = c.upload(f"/library/objects/{q(args.object)}/processed-images", fpath,
-                   {"title": args.title or "", "notes": args.notes or ""}, field="image")
+    rec = send_file(c, args, "processed-image", f"/library/objects/{q(args.object)}/processed-images", fpath,
+                    {"title": args.title or "", "notes": args.notes or ""}, "image")
     out(args, rec, f"added image {rec.get('originalName')} ({fmt_bytes(rec.get('size'))}) to {args.object}")
 
 
@@ -601,13 +990,21 @@ def main(argv: list[str] | None = None) -> None:
             s.add_argument("--force", action="store_true")
     s = sub.add_parser("archives"); s.add_argument("object")
     s = sub.add_parser("images"); s.add_argument("object")
-    s = sub.add_parser("image"); s.add_argument("object"); s.add_argument("--file", required=True)
+    chunk_help = "use the chunked upload API even under 1 GiB (it is used above 1 GiB anyway)"
+    resume_help = "finish a stopped chunked upload: sends only the chunks the server is missing"
+    s = sub.add_parser("image"); s.add_argument("object")
+    src = s.add_mutually_exclusive_group(required=True)
+    src.add_argument("--file"); src.add_argument("--resume", metavar="UPLOAD_ID", help=resume_help)
     s.add_argument("--title"); s.add_argument("--notes"); s.add_argument("--force", action="store_true")
+    s.add_argument("--chunked", action="store_true", help=chunk_help)
     s = sub.add_parser("push"); s.add_argument("object")
     src = s.add_mutually_exclusive_group(required=True)
     src.add_argument("--file"); src.add_argument("--bundle")
+    src.add_argument("--resume", metavar="UPLOAD_ID", help=resume_help)
     s.add_argument("--name", help="zip name for --bundle"); s.add_argument("--title"); s.add_argument("--notes")
+    s.add_argument("--tmp", metavar="DIR", help="where --bundle writes the zip (default: the system temp folder)")
     s.add_argument("--software", default="PixInsight"); s.add_argument("--force", action="store_true")
+    s.add_argument("--chunked", action="store_true", help=chunk_help)
 
     args = p.parse_args(argv)
     base, key = load_config()
@@ -622,6 +1019,13 @@ def main(argv: list[str] | None = None) -> None:
             # the API with its id.
             args.object = find_object(c, args.object)["id"]
         handlers[args.cmd](c, args)
+    except UploadStopped as e:
+        print(f"error: upload {e.upload_id} stopped at {fmt_pair(e.done, e.size)}: {e.reason}", file=sys.stderr)
+        print(f"the upload stays on the server; resume it with: nebulis.py {args.cmd} {args.object} "
+              f"--resume {e.upload_id}", file=sys.stderr)
+        sys.exit(4)
+    except KeyboardInterrupt:
+        die("interrupted", 130)
     except ApiError as e:
         hint = ""
         if e.status == 401:
@@ -630,7 +1034,10 @@ def main(argv: list[str] | None = None) -> None:
             hint = " (this action needs an admin key)"
         elif e.status == 404 and e.code in ("NOT_FOUND", "HTTP_ERROR"):
             hint = " (unknown object or date, or a Nebulis version without this endpoint)"
-        die(f"{e.status} {e.code}: {e.message}{hint}", 3)
+        elif e.status == 413:
+            hint = (f" (Nebulis stores files up to {fmt_bytes(e.max_size)} here)" if e.max_size
+                    else " (the file is over what Nebulis accepts here)")
+        die(f"{f'{e.status} ' if e.status else ''}{e.code}: {e.message}{hint}", 3)
 
 
 if __name__ == "__main__":

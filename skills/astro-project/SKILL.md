@@ -12,7 +12,7 @@ description: >-
 license: MIT
 metadata:
   author: jjmartres
-  version: "0.5.2"
+  version: "0.5.3"
 ---
 
 # Astro project
