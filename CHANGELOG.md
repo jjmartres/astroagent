@@ -5,6 +5,7 @@
 A post for r/astrophotography, built to the subreddit's rules, next to the AstroBin export.
 
 - `astro-project`: `astro_project.py reddit WS` writes `output/reddit.json`, a post for r/astrophotography built to its rules: a title with the object name only (rule 4), the final JPEG to upload in the post (rule 1; the web JPEG when the first is over 20 MB), and a body with the acquisition details (telescope, mount, camera, filters, subs × exposure per filter, calibration frames) and the processing details (software and versions, each stage done with its processes or applied values, palette) (rule 5). Facts only: the first line is left for the user's own words. Exit 2 when the mount or the report.json stages are missing; printed checks for what cannot be checked (rule 3 on pre-calibrated or remote data, the one-week wait for a reprocessing). `bundle` puts `reddit.json` in the archive.
+- Site: the "Documented for you" card mentions the Reddit post for r/astrophotography, in four languages.
 
 ## 0.5.3 (2026-11-22)
 
