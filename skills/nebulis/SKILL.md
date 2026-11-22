@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: jjmartres
-  version: "0.5.3"
+  version: "0.6.0"
 ---
 
 # Nebulis
