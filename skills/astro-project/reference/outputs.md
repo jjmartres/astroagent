@@ -38,3 +38,16 @@ Pretty-printed, for copying into AstroBin's upload form by hand; the file is not
 | `first_acquisition_date`, `last_acquisition_date` | first and last night |
 | `keywords` | id, common name, catalogue ids, constellation, palette |
 | `image_file`, `link` | empty: the user uploads the image |
+
+## reddit.json (optional)
+
+The r/astrophotography post, for pasting by hand. Built to the subreddit's rules; it holds facts only.
+
+| Field | From |
+|---|---|
+| `title` | `"<common name> (<id>)"`, nothing else (rule 4: no equipment, acquisition or processing details) |
+| `image_file` | `final/<NAME>.jpg`, or `final/<NAME>_web.jpg` when the first is over Reddit's 20 MB; uploaded in the post (rule 1) |
+| `body` | Markdown: a placeholder line for the user's own words, **Acquisition** (telescope, camera and cooling, mount, filters, site name and Bortle class without coordinates, subs kept and total integration, one line per filter, calibration frame counts) and **Processing** (PixInsight and plug-in versions, Nebulis, astroagent, then one line per stage done in report.json: summary, processes or applied values; palette) (rule 5) |
+| `checks` | what the script could not check: own words, rule 1, rule 4, the one-week wait for a reprocessing (rule 3), pre-calibrated lights (rule 3), length |
+
+Exit 2 when the mount or report.json stages are missing: rule 5 asks for both.

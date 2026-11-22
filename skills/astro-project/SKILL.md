@@ -6,9 +6,9 @@ description: >-
   the FITS headers and Nebulis profiles; write the PixInsight project description (project.json), a
   documentation page (doc/index.html), a session report of what was measured, proposed and decided
   (doc/session-report.html), process icons with the parameters actually applied (.xpsm) and, on request,
-  AstroBin form fields (astrobin.json). Called by astro-processing after Fetch and at the end; also on its own
-  for "document Sh2-105", "bootstrap the project", "make the project description", "process icons",
-  "xpsm", "astrobin post", "session report".
+  AstroBin form fields (astrobin.json) and an r/astrophotography post (reddit.json). Called by astro-processing
+  after Fetch and at the end; also on its own for "document Sh2-105", "bootstrap the project", "make the project
+  description", "process icons", "xpsm", "astrobin post", "reddit post", "r/astrophotography", "session report".
 license: MIT
 metadata:
   author: jjmartres
@@ -32,6 +32,7 @@ Everything here is about one processing workspace, `$ASTROAGENT_ROOT/<OBJECT>` (
 | `output/pixinsight/<NAME>.pxiproject` | The PixInsight project, saved by the user |
 | `output/push/` | The project archive's content, built by `bundle` |
 | `output/astrobin.json` | Only when the user wants it |
+| `output/reddit.json` | Only when the user wants it: the r/astrophotography post |
 
 The pixinsight-connector writes only under `agentic/` and `output/`; keep every file of this skill there too. Never write under `data/`.
 
@@ -79,13 +80,14 @@ Called from Stage 12 of astro-processing, after `PROCESSING.md` is written.
 3. **Process icons.** `astro_project.py icons <WS> [--from-seq N] [--exclude-view REGEX]` reads the pixinsight-connector call logs (`agentic/**/*.jsonl`), keeps the processing calls that succeeded and the process instances they ran, and writes `agentic/work/icons.js`. Leave out an abandoned attempt (`--from-seq`) and rejected candidates or diagnostic views (`--exclude-view`), and check the printed list against PROCESSING.md. Run `agentic/work/icons.js` with `run_pjsr_file` (it writes `agentic/work/icons-result.json` itself and returns a summary); then `astro_project.py xpsm <WS>`. PixInsight itself serializes each instance (`toSource("XPSM 1.0")`), so parameter names and values are exactly what ran. Report the icons that could not be converted. Details and limits: `reference/process-icons.md`.
 4. **project.json** again (step 3), so it carries the palette.
 5. **astrobin.json**, only if the user asked for it or says they post on AstroBin: `astro_project.py astrobin <WS>`. One acquisition row per night and filter, with the calibration frame counts; `image_file` stays empty (the user uploads). Fields: `reference/outputs.md`.
+   **reddit.json**, only if the user wants to post on r/astrophotography: `astro_project.py reddit <WS>`. It follows the subreddit's rules: the title names the object only (rule 4: no equipment, palette or integration), the image is the one to upload in the post itself (rule 1: no link elsewhere, except AstroBin), and the body lists the acquisition (telescope, mount, camera, filters, subs × exposure per filter, calibration frames) and the processing (software, then each stage done with its processes or applied values, from report.json) (rule 5). It holds facts only: the first line is a placeholder that the user replaces with their own words. Never write that part for them, never add emojis: posts written by the agent were removed from r/PixInsight. Exit 2 lists what rule 5 needs and is missing (mount: `scan --set mount=…`; report.json stages). Show the user the printed checks, especially rule 3 when the lights came pre-calibrated (remote or professional data may not be allowed). On macOS, offer to copy the body: `python3 -c "import json;print(json.load(open('<WS>/output/reddit.json'))['body'])" | pbcopy`.
 6. **PixInsight project.** Ask the user to fill the project's Description (step 3) and Documentation fields, then save it with *File → Save Project As* as `output/pixinsight/<NAME>.pxiproject` (the path `names` prints). Optional: without it the archive has no `pixinsight/` folder.
 7. **Archive.** `astro_project.py bundle <WS>` rebuilds `output/push/` in the standard layout below, lists what it placed, notes files that do not follow `<NAME>`, and prints the `nebulis.py push` command. Exit 2 lists what is missing (PROCESSING.md, rig.json, report.json, project.json, `doc/`, `final/<NAME>.xisf`). `--add FILE` puts another session record in `session/`. The session report's previews must be inside `output/doc/` (copy them to `output/doc/previews/` and use `previews/<file>` in report.json), or the links break in the archive.
 
 ```text
 <NAME>_processing.zip
 ├── PROCESSING.md
-├── rig.json  research.json  report.json  project.json  [astrobin.json]
+├── rig.json  research.json  report.json  project.json  [astrobin.json]  [reddit.json]
 ├── <NAME>.xpsm
 ├── doc/            index.html, session-report.html, previews/
 ├── final/          <NAME>.xisf, <NAME>.tif, <NAME>.jpg, <NAME>_web.jpg

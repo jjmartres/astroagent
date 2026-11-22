@@ -18,7 +18,7 @@ Nothing here modifies PixInsight or the connector: PixInsight is operated throug
 | Skill | What it does |
 |---|---|
 | `skills/astro-processing` | The workflow: sub review, calibration plan, WBPP stacking, D1/D2 channel extraction and HOO/SHO palettes (or the broadband path), starless stretch with three candidates, finishing, export, `PROCESSING.md`, push back to Nebulis. Rig facts, calibration rules and quality gates are in its `reference/` folder. |
-| `skills/astro-project` | Describes and documents each processed campaign: `rig.json` (target, site, optics, camera, filters, per-night sequences) read from the Nebulis export and the FITS headers, the PixInsight project description, a documentation page, a session report of every stage, process icons with the parameters actually applied, and AstroBin form fields on request. Script: `scripts/astro_project.py`. |
+| `skills/astro-project` | Describes and documents each processed campaign: `rig.json` (target, site, optics, camera, filters, per-night sequences) read from the Nebulis export and the FITS headers, the PixInsight project description, a documentation page, a session report of every stage, process icons with the parameters actually applied, and AstroBin form fields or an r/astrophotography post on request. Script: `scripts/astro_project.py`. |
 | `skills/nebulis` | A command-line client (`scripts/nebulis.py`) for the Nebulis API: objects, nights, Frame Analysis and keep/reject review, stacking plan, WBPP-ready export download, upload of results. Usable on its own. |
 
 ## How a session runs
@@ -198,6 +198,7 @@ output/<NAME>.xpsm             process icons
 output/pixinsight/<NAME>.pxiproject  the PixInsight project, saved by you
 output/push/                   the archive for Nebulis, same layout every run
 output/astrobin.json           AstroBin form fields, when you ask for them
+output/reddit.json             r/astrophotography post (title, image, details), when you ask for it
 ```
 
 `<NAME>` is `<OBJECT>_<PALETTE>_<YYYY-MM-DD>` (Nebulis object id, palette, processing day), for example `SH2-112_HOO_2026-11-16`: the final files, the process icons, the PixInsight project and the archive pushed to Nebulis (`<NAME>_processing.zip`) all carry it, and every archive has the same folders (`final/`, `doc/`, `pixinsight/`, `session/`).
